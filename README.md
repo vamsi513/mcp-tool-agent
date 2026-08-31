@@ -83,7 +83,9 @@ asyncio.run(main())
 EOF
 ```
 
-A recorded run against all three tools is in [TEST_RUN.md](TEST_RUN.md).
+Recorded runs against all three tools, plus error paths (unknown user,
+unreachable/404/non-http URLs, missing database, schema validation), are in
+[TEST_RUN.md](TEST_RUN.md).
 
 ## Notes
 

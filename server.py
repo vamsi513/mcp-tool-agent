@@ -1,0 +1,160 @@
+"""MCP server exposing three tools: GitHub repo search, URL text extraction,
+and a query over a small local book database.
+
+Run directly for stdio transport:
+
+    python server.py
+"""
+
+import os
+import sqlite3
+from pathlib import Path
+
+import httpx
+from bs4 import BeautifulSoup
+from dotenv import load_dotenv
+from mcp.server.fastmcp import FastMCP
+
+load_dotenv()
+
+DB_PATH = Path(__file__).parent / "books.db"
+GITHUB_API = "https://api.github.com"
+USER_AGENT = "mcp-tool-agent/0.1"
+
+mcp = FastMCP("tool-agent-demo")
+
+
+@mcp.tool()
+def search_github_repos(username: str, query: str = "", limit: int = 5) -> dict:
+    """Search a GitHub user's public repositories.
+
+    Returns repos owned by `username` whose name or description contains
+    `query` (case-insensitive). If `query` is empty, returns the user's
+    most recently updated repos. `limit` caps the number of results (1-20).
+    """
+    limit = max(1, min(limit, 20))
+    headers = {"User-Agent": USER_AGENT, "Accept": "application/vnd.github+json"}
+    token = os.getenv("GITHUB_TOKEN")
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+
+    params = {"per_page": 100, "sort": "updated", "type": "owner"}
+    with httpx.Client(timeout=15) as client:
+        resp = client.get(
+            f"{GITHUB_API}/users/{username}/repos", headers=headers, params=params
+        )
+
+    if resp.status_code == 404:
+        return {"error": f"GitHub user '{username}' not found", "results": []}
+    if resp.status_code != 200:
+        return {
+            "error": f"GitHub API returned {resp.status_code}: {resp.text[:200]}",
+            "results": [],
+        }
+
+    needle = query.strip().lower()
+    matches = []
+    for repo in resp.json():
+        name = repo.get("name") or ""
+        description = repo.get("description") or ""
+        if needle and needle not in name.lower() and needle not in description.lower():
+            continue
+        matches.append(
+            {
+                "name": repo.get("full_name"),
+                "description": description,
+                "stars": repo.get("stargazers_count", 0),
+                "language": repo.get("language"),
+                "url": repo.get("html_url"),
+                "updated_at": repo.get("updated_at"),
+            }
+        )
+
+    return {"count": len(matches[:limit]), "results": matches[:limit]}
+
+
+@mcp.tool()
+def fetch_url_text(url: str, max_chars: int = 4000) -> dict:
+    """Fetch a web page and return its visible text with HTML stripped.
+
+    Useful when the caller needs the content of a specific page to read or
+    summarize. `max_chars` truncates the returned text (500-20000).
+    """
+    max_chars = max(500, min(max_chars, 20000))
+    if not url.startswith(("http://", "https://")):
+        return {"error": "url must start with http:// or https://", "text": ""}
+
+    headers = {"User-Agent": USER_AGENT}
+    try:
+        with httpx.Client(timeout=20, follow_redirects=True) as client:
+            resp = client.get(url, headers=headers)
+    except httpx.RequestError as exc:
+        return {"error": f"request failed: {exc}", "text": ""}
+
+    if resp.status_code != 200:
+        return {"error": f"HTTP {resp.status_code}", "text": ""}
+
+    soup = BeautifulSoup(resp.text, "html.parser")
+    for tag in soup(["script", "style", "noscript", "header", "footer", "nav"]):
+        tag.decompose()
+
+    title = soup.title.string.strip() if soup.title and soup.title.string else ""
+    text = " ".join(soup.get_text(separator=" ").split())
+    truncated = len(text) > max_chars
+
+    return {
+        "url": str(resp.url),
+        "title": title,
+        "truncated": truncated,
+        "text": text[:max_chars],
+    }
+
+
+@mcp.tool()
+def query_books(
+    author: str = "",
+    genre: str = "",
+    min_year: int = 0,
+    min_rating: float = 0.0,
+    limit: int = 10,
+) -> dict:
+    """Query the local book database.
+
+    Filters are combined with AND. `author` and `genre` match on substring
+    (case-insensitive); `min_year` and `min_rating` are lower bounds. Results
+    are ordered by rating descending. `limit` caps results (1-20).
+    """
+    if not DB_PATH.exists():
+        return {"error": "books.db not found; run seed_books.py first", "results": []}
+
+    limit = max(1, min(limit, 20))
+    clauses = []
+    args: list = []
+    if author:
+        clauses.append("LOWER(author) LIKE ?")
+        args.append(f"%{author.lower()}%")
+    if genre:
+        clauses.append("LOWER(genre) LIKE ?")
+        args.append(f"%{genre.lower()}%")
+    if min_year:
+        clauses.append("year >= ?")
+        args.append(min_year)
+    if min_rating:
+        clauses.append("rating >= ?")
+        args.append(min_rating)
+
+    where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+    sql = f"SELECT title, author, year, genre, rating FROM books {where} ORDER BY rating DESC LIMIT ?"
+    args.append(limit)
+
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    rows = conn.execute(sql, args).fetchall()
+    conn.close()
+
+    results = [dict(row) for row in rows]
+    return {"count": len(results), "results": results}
+
+
+if __name__ == "__main__":
+    mcp.run()

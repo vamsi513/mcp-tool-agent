@@ -16,7 +16,7 @@ import asyncio
 import json
 import os
 import sys
-import time
+from typing import Any
 
 from dotenv import load_dotenv
 from mcp import ClientSession, StdioServerParameters
@@ -28,8 +28,13 @@ load_dotenv()
 
 DEFAULT_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 DEFAULT_MAX_TURNS = int(os.getenv("AGENT_MAX_TURNS", "5"))
-TEMPERATURE = float(os.getenv("OPENAI_TEMPERATURE", "0"))
 RETRY_ATTEMPTS = 3
+
+
+def _temperature():
+    """Temperature to send, or None to omit it (some models reject the field)."""
+    raw = os.getenv("OPENAI_TEMPERATURE", "0").strip()
+    return None if raw.lower() in ("", "none", "default") else float(raw)
 
 SYSTEM_PROMPT = (
     "You answer the user's question. You have a set of tools available. "
@@ -73,7 +78,7 @@ def tool_result_text(result) -> str:
     return "\n".join(parts) if parts else "(no content)"
 
 
-def complete_with_retry(client: OpenAI, **kwargs):
+async def complete_with_retry(client: OpenAI, **kwargs):
     """Call chat.completions.create, retrying transient errors with backoff."""
     for attempt in range(1, RETRY_ATTEMPTS + 1):
         try:
@@ -86,7 +91,8 @@ def complete_with_retry(client: OpenAI, **kwargs):
             wait = 2 ** (attempt - 1)
             log(f"LLM call failed ({exc.__class__.__name__}), retrying in {wait}s",
                 {"attempt": attempt})
-            time.sleep(wait)
+            await asyncio.sleep(wait)
+    raise RuntimeError("unreachable: retry loop exited without returning or raising")
 
 
 async def call_tool_safely(session: ClientSession, name: str, arguments_json: str) -> str:
@@ -123,7 +129,8 @@ async def run(question: str, model: str, max_turns: int) -> str:
 
             client = OpenAI()
             openai_tools = mcp_tools_to_openai(listed.tools)
-            messages = [
+            temperature = _temperature()
+            messages: list[dict[str, Any]] = [
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": question},
             ]
@@ -132,14 +139,15 @@ async def run(question: str, model: str, max_turns: int) -> str:
                 # On the last turn, drop the tools so the model has to answer
                 # from what it already has instead of stalling on another call.
                 use_tools = turn < max_turns
-                completion = complete_with_retry(
-                    client,
-                    model=model,
-                    messages=messages,
-                    temperature=TEMPERATURE,
-                    tools=openai_tools if use_tools else None,
-                    tool_choice="auto" if use_tools else None,
-                )
+                request: dict[str, Any] = {
+                    "model": model,
+                    "messages": messages,
+                    "tools": openai_tools if use_tools else None,
+                    "tool_choice": "auto" if use_tools else None,
+                }
+                if temperature is not None:
+                    request["temperature"] = temperature
+                completion = await complete_with_retry(client, **request)
                 if completion.usage:
                     log(f"turn {turn}: token usage", {
                         "prompt": completion.usage.prompt_tokens,

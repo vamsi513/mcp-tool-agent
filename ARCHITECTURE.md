@@ -88,10 +88,12 @@ URLs. That is the main risk surface.
 ## Testing
 
 `tests/` covers the tool logic with mocked HTTP (`httpx.MockTransport`), the
-SSRF guard including the redirect-hop case, and a real stdio round-trip that
-spawns the server and exercises `initialize` / `tools/list` / `tools/call`.
-`TEST_RUN.md` is captured output from running the agent against a live model,
-kept as evidence rather than as an automated check.
+SSRF guard including the redirect-hop case, a real stdio round-trip that
+spawns the server and exercises `initialize` / `tools/list` / `tools/call`,
+and `agent.run()` driven by a scripted LLM while the tools execute against
+that real server. CI also runs `ruff` and `mypy`. `TEST_RUN.md` is captured
+output from running the agent against a live model, kept as evidence rather
+than as an automated check.
 
 ## What is deliberately not here
 

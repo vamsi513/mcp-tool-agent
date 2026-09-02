@@ -59,9 +59,12 @@ python seed_books.py      # creates books.db
 
 - `OPENAI_API_KEY` – required by the agent.
 - `OPENAI_MODEL` – optional, defaults to `gpt-4o-mini`.
-- `OPENAI_TEMPERATURE` – optional, defaults to `0`.
+- `OPENAI_TEMPERATURE` – optional, defaults to `0`; set to `none` to omit the field.
 - `AGENT_MAX_TURNS` – optional, defaults to `5`.
 - `GITHUB_TOKEN` – optional, raises the GitHub API rate limit.
+
+Installing the package (`pip install -e .`) also puts a `mcp-tool-agent`
+command on your path, equivalent to `python agent.py`.
 
 ## Running
 
@@ -101,12 +104,15 @@ unreachable/404/non-http URLs, missing database, schema validation), are in
 ```bash
 pip install -r requirements-dev.txt
 python seed_books.py
-pytest -q
+ruff check .
+mypy server.py agent.py seed_books.py
+pytest -q --cov
 ```
 
 The suite covers the tool logic with mocked HTTP, the SSRF guard (including
-the redirect-hop case), and a real stdio round-trip that spawns the server.
-CI runs `ruff` and the suite on Python 3.11–3.13.
+the redirect-hop case), a real stdio round-trip that spawns the server, and
+`agent.run()` driven by a scripted LLM against that real server. CI runs
+ruff, mypy, and the suite on Python 3.11–3.13.
 
 ## Notes
 

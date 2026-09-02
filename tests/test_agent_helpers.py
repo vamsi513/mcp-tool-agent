@@ -53,7 +53,8 @@ async def test_call_tool_safely_rejects_non_object_args():
     assert "must be a JSON object" in out
 
 
-def test_complete_with_retry_retries_then_succeeds(monkeypatch):
+@pytest.mark.asyncio
+async def test_complete_with_retry_retries_then_succeeds(monkeypatch):
     calls = {"n": 0}
 
     class Boom(agent.APIConnectionError):
@@ -66,9 +67,39 @@ def test_complete_with_retry_retries_then_succeeds(monkeypatch):
             raise Boom()
         return "ok"
 
-    monkeypatch.setattr(agent.time, "sleep", lambda s: None)
+    monkeypatch.setattr(agent.asyncio, "sleep", _noop_sleep)
     fake_client = types.SimpleNamespace(
         chat=types.SimpleNamespace(completions=types.SimpleNamespace(create=flaky))
     )
-    assert agent.complete_with_retry(fake_client) == "ok"
+    assert await agent.complete_with_retry(fake_client) == "ok"
     assert calls["n"] == 3
+
+
+@pytest.mark.asyncio
+async def test_complete_with_retry_gives_up_after_max_attempts(monkeypatch):
+    class Boom(agent.APIConnectionError):
+        def __init__(self):
+            pass
+
+    def always_fails(**kwargs):
+        raise Boom()
+
+    monkeypatch.setattr(agent.asyncio, "sleep", _noop_sleep)
+    fake_client = types.SimpleNamespace(
+        chat=types.SimpleNamespace(completions=types.SimpleNamespace(create=always_fails))
+    )
+    with pytest.raises(agent.APIConnectionError):
+        await agent.complete_with_retry(fake_client)
+
+
+async def _noop_sleep(_seconds):
+    return None
+
+
+@pytest.mark.parametrize(
+    "env, expected",
+    [("0", 0.0), ("0.7", 0.7), ("", None), ("none", None), ("default", None)],
+)
+def test_temperature_parsing(monkeypatch, env, expected):
+    monkeypatch.setenv("OPENAI_TEMPERATURE", env)
+    assert agent._temperature() == expected

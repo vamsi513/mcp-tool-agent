@@ -10,6 +10,7 @@ import ipaddress
 import os
 import socket
 import sqlite3
+from contextlib import closing
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -214,10 +215,9 @@ def query_books(
     sql = f"SELECT title, author, year, genre, rating FROM books {where} ORDER BY rating DESC LIMIT ?"
     args.append(limit)
 
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    rows = conn.execute(sql, args).fetchall()
-    conn.close()
+    with closing(sqlite3.connect(DB_PATH)) as conn:
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute(sql, args).fetchall()
 
     results = [dict(row) for row in rows]
     return {"count": len(results), "results": results}

@@ -8,6 +8,9 @@ Tool calls always travel through MCP (`tools/list` + `tools/call` over a
 stdio JSON-RPC connection). The agent never imports the tool functions
 directly.
 
+See [ARCHITECTURE.md](ARCHITECTURE.md) for the design choices and the
+security model.
+
 ## The server
 
 `server.py` is a `FastMCP` server named `tool-agent-demo` that speaks over
@@ -15,9 +18,9 @@ stdio. It exposes:
 
 | Tool | Description | Inputs |
 |---|---|---|
-| `search_github_repos` | Lists a GitHub user's public repos, filtered by a substring match on name/description. Calls the live GitHub REST API. | `username` (str), `query` (str, optional), `limit` (int 1–20, default 5) |
-| `fetch_url_text` | Fetches a web page, strips scripts/styles/nav/header/footer, returns the visible text plus the page title. | `url` (http/https), `max_chars` (int 500–20000, default 4000) |
-| `query_books` | Queries a local SQLite database of 20 books. Filters are AND-combined; results ordered by rating descending. | `author` (substring), `genre` (substring), `min_year` (int), `min_rating` (float), `limit` (int 1–20, default 10) |
+| `search_github_repos` | Lists a GitHub user's public repos, filtered by a substring match on name/description. Calls the live GitHub REST API, following pagination up to 10 pages. | `username` (str), `query` (str, optional), `limit` (int 1–20, default 5) |
+| `fetch_url_text` | Fetches a web page and returns its visible text (scripts/styles/nav stripped) plus the title. Rejects non-public hosts, oversized responses, and non-text content. | `url` (http/https), `max_chars` (int 500–20000, default 4000) |
+| `query_books` | Queries a local SQLite database of 20 books. Filters are AND-combined; results ordered by rating descending. | `author` (substring), `genre` (substring), `min_year` (int or null), `min_rating` (float or null), `limit` (int 1–20, default 10) |
 
 Each tool's input schema is generated from its typed signature and returned
 in `tools/list`.
@@ -30,10 +33,16 @@ in `tools/list`.
 2. Runs the `initialize` handshake, then `tools/list`.
 3. Converts the MCP tool definitions into the LLM's tool-calling format.
 4. Asks the LLM (OpenAI, `gpt-4o-mini` by default) to answer, with the tools available.
-5. For each tool call the model returns, executes it via `tools/call` and feeds the result back.
-6. Prints the model's final answer once it stops calling tools (max 5 turns).
+5. For each tool call the model returns, executes it via `tools/call` and feeds the result back. Bad tool arguments and protocol errors are turned into text the model can react to.
+6. On the final turn the tools are withheld so the model must answer from what it has.
+7. Prints the model's answer.
 
-Every protocol step is logged to stderr with an `[agent]` prefix.
+Transient LLM errors are retried with backoff. Every protocol step and token
+usage is logged to stderr with an `[agent]` prefix.
+
+```
+python agent.py [--model MODEL] [--max-turns N] "your question"
+```
 
 ## Setup
 
@@ -50,11 +59,11 @@ python seed_books.py      # creates books.db
 
 - `OPENAI_API_KEY` – required by the agent.
 - `OPENAI_MODEL` – optional, defaults to `gpt-4o-mini`.
+- `OPENAI_TEMPERATURE` – optional, defaults to `0`.
+- `AGENT_MAX_TURNS` – optional, defaults to `5`.
 - `GITHUB_TOKEN` – optional, raises the GitHub API rate limit.
 
 ## Running
-
-Run the agent with a question:
 
 ```bash
 python agent.py "Which fantasy books in the database are rated above 4.3?"
@@ -87,8 +96,20 @@ Recorded runs against all three tools, plus error paths (unknown user,
 unreachable/404/non-http URLs, missing database, schema validation), are in
 [TEST_RUN.md](TEST_RUN.md).
 
+## Tests
+
+```bash
+pip install -r requirements-dev.txt
+python seed_books.py
+pytest -q
+```
+
+The suite covers the tool logic with mocked HTTP, the SSRF guard (including
+the redirect-hop case), and a real stdio round-trip that spawns the server.
+CI runs `ruff` and the suite on Python 3.11–3.13.
+
 ## Notes
 
-- Pinned to `mcp==1.29.1` (the 1.x `FastMCP` API). The 2.x release renames
+- Pinned to `mcp==1.29.x` (the 1.x `FastMCP` API). The 2.x release renames
   the server class and changes several APIs.
 - No secrets are committed; `.env` and `books.db` are gitignored.

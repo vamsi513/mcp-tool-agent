@@ -25,6 +25,7 @@ DB_PATH = Path(__file__).parent / "books.db"
 GITHUB_API = "https://api.github.com"
 USER_AGENT = "mcp-tool-agent/0.1"
 MAX_REDIRECTS = 5
+MAX_GITHUB_PAGES = 10
 MAX_RESPONSE_BYTES = 5 * 1024 * 1024
 READABLE_CONTENT_TYPES = ("text/html", "text/plain", "application/xhtml+xml", "application/xml", "text/xml")
 
@@ -75,6 +76,10 @@ def search_github_repos(username: str, query: str = "", limit: int = 5) -> dict:
     Returns repos owned by `username` whose name or description contains
     `query` (case-insensitive). If `query` is empty, returns the user's
     most recently updated repos. `limit` caps the number of results (1-20).
+
+    Repos are read in pages of 100, following the API's Link header up to
+    MAX_GITHUB_PAGES pages. Set GITHUB_TOKEN to raise the rate limit; without
+    it, users with many repos may exhaust the unauthenticated quota.
     """
     limit = max(1, min(limit, 20))
     headers = {"User-Agent": USER_AGENT, "Accept": "application/vnd.github+json"}
@@ -82,23 +87,28 @@ def search_github_repos(username: str, query: str = "", limit: int = 5) -> dict:
     if token:
         headers["Authorization"] = f"Bearer {token}"
 
+    repos = []
+    next_url = f"{GITHUB_API}/users/{username}/repos"
     params = {"per_page": 100, "sort": "updated", "type": "owner"}
     with httpx.Client(timeout=15) as client:
-        resp = client.get(
-            f"{GITHUB_API}/users/{username}/repos", headers=headers, params=params
-        )
-
-    if resp.status_code == 404:
-        return {"error": f"GitHub user '{username}' not found", "results": []}
-    if resp.status_code != 200:
-        return {
-            "error": f"GitHub API returned {resp.status_code}: {resp.text[:200]}",
-            "results": [],
-        }
+        for _ in range(MAX_GITHUB_PAGES):
+            resp = client.get(next_url, headers=headers, params=params)
+            if resp.status_code == 404:
+                return {"error": f"GitHub user '{username}' not found", "results": []}
+            if resp.status_code != 200:
+                return {
+                    "error": f"GitHub API returned {resp.status_code}: {resp.text[:200]}",
+                    "results": [],
+                }
+            repos.extend(resp.json())
+            if "next" not in resp.links:
+                break
+            next_url = resp.links["next"]["url"]
+            params = None  # the next link already carries the query string
 
     needle = query.strip().lower()
     matches = []
-    for repo in resp.json():
+    for repo in repos:
         name = repo.get("name") or ""
         description = repo.get("description") or ""
         if needle and needle not in name.lower() and needle not in description.lower():
@@ -114,7 +124,8 @@ def search_github_repos(username: str, query: str = "", limit: int = 5) -> dict:
             }
         )
 
-    return {"count": len(matches[:limit]), "results": matches[:limit]}
+    top = matches[:limit]
+    return {"count": len(top), "results": top}
 
 
 @mcp.tool()

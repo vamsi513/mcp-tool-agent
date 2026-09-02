@@ -93,24 +93,27 @@ def search_github_repos(username: str, query: str = "", limit: int = 5) -> dict:
     if token:
         headers["Authorization"] = f"Bearer {token}"
 
-    repos = []
+    repos: list[dict] = []
     next_url = f"{GITHUB_API}/users/{username}/repos"
-    params = {"per_page": 100, "sort": "updated", "type": "owner"}
-    with httpx.Client(timeout=15) as client:
-        for _ in range(MAX_GITHUB_PAGES):
-            resp = client.get(next_url, headers=headers, params=params)
-            if resp.status_code == 404:
-                return {"error": f"GitHub user '{username}' not found", "results": []}
-            if resp.status_code != 200:
-                return {
-                    "error": f"GitHub API returned {resp.status_code}: {resp.text[:200]}",
-                    "results": [],
-                }
-            repos.extend(resp.json())
-            if "next" not in resp.links:
-                break
-            next_url = resp.links["next"]["url"]
-            params = None  # the next link already carries the query string
+    params: dict[str, str | int] | None = {"per_page": 100, "sort": "updated", "type": "owner"}
+    try:
+        with httpx.Client(timeout=15) as client:
+            for _ in range(MAX_GITHUB_PAGES):
+                resp = client.get(next_url, headers=headers, params=params)
+                if resp.status_code == 404:
+                    return {"error": f"GitHub user '{username}' not found", "results": []}
+                if resp.status_code != 200:
+                    return {
+                        "error": f"GitHub API returned {resp.status_code}: {resp.text[:200]}",
+                        "results": [],
+                    }
+                repos.extend(resp.json())
+                if "next" not in resp.links:
+                    break
+                next_url = resp.links["next"]["url"]
+                params = None  # the next link already carries the query string
+    except httpx.RequestError as exc:
+        return {"error": f"request failed: {exc}", "results": []}
 
     needle = query.strip().lower()
     matches = []
@@ -136,10 +139,15 @@ def search_github_repos(username: str, query: str = "", limit: int = 5) -> dict:
 
 @mcp.tool()
 def fetch_url_text(url: str, max_chars: int = 4000) -> dict:
-    """Fetch a web page and return its visible text with HTML stripped.
+    """Fetch a public web page and return its visible text with HTML stripped.
 
     Useful when the caller needs the content of a specific page to read or
     summarize. `max_chars` truncates the returned text (500-20000).
+
+    Only fetches http(s) URLs on public hosts: requests to loopback, private,
+    or link-local addresses are refused, as are responses over 5 MB or with a
+    non-text content type. On any of these the result has an `error` field
+    and an empty `text`.
     """
     max_chars = max(500, min(max_chars, 20000))
 
@@ -153,7 +161,7 @@ def fetch_url_text(url: str, max_chars: int = 4000) -> dict:
                     return {"error": reason, "text": ""}
 
                 with client.stream("GET", current, headers=headers) as resp:
-                    if resp.is_redirect and resp.has_redirect_location:
+                    if resp.is_redirect and resp.next_request is not None:
                         current = str(resp.next_request.url)
                         continue
                     if resp.status_code != 200:

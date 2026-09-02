@@ -24,6 +24,8 @@ DB_PATH = Path(__file__).parent / "books.db"
 GITHUB_API = "https://api.github.com"
 USER_AGENT = "mcp-tool-agent/0.1"
 MAX_REDIRECTS = 5
+MAX_RESPONSE_BYTES = 5 * 1024 * 1024
+READABLE_CONTENT_TYPES = ("text/html", "text/plain", "application/xhtml+xml", "application/xml", "text/xml")
 
 mcp = FastMCP("tool-agent-demo")
 
@@ -132,20 +134,34 @@ def fetch_url_text(url: str, max_chars: int = 4000) -> dict:
                 if reason:
                     return {"error": reason, "text": ""}
 
-                resp = client.get(current, headers=headers)
-                if resp.is_redirect and resp.has_redirect_location:
-                    current = str(resp.next_request.url)
-                    continue
+                with client.stream("GET", current, headers=headers) as resp:
+                    if resp.is_redirect and resp.has_redirect_location:
+                        current = str(resp.next_request.url)
+                        continue
+                    if resp.status_code != 200:
+                        return {"error": f"HTTP {resp.status_code}", "text": ""}
+
+                    content_type = resp.headers.get("content-type", "").split(";")[0].strip().lower()
+                    if content_type and content_type not in READABLE_CONTENT_TYPES:
+                        return {"error": f"unsupported content type: {content_type}", "text": ""}
+
+                    chunks = []
+                    total = 0
+                    for chunk in resp.iter_bytes():
+                        chunks.append(chunk)
+                        total += len(chunk)
+                        if total > MAX_RESPONSE_BYTES:
+                            return {"error": "response too large", "text": ""}
+                    body = b"".join(chunks)
+                    final_url = str(resp.url)
+                    encoding = resp.charset_encoding or "utf-8"
                 break
             else:
                 return {"error": "too many redirects", "text": ""}
     except httpx.RequestError as exc:
         return {"error": f"request failed: {exc}", "text": ""}
 
-    if resp.status_code != 200:
-        return {"error": f"HTTP {resp.status_code}", "text": ""}
-
-    soup = BeautifulSoup(resp.text, "html.parser")
+    soup = BeautifulSoup(body.decode(encoding, errors="replace"), "html.parser")
     for tag in soup(["script", "style", "noscript", "header", "footer", "nav"]):
         tag.decompose()
 
@@ -154,7 +170,7 @@ def fetch_url_text(url: str, max_chars: int = 4000) -> dict:
     truncated = len(text) > max_chars
 
     return {
-        "url": str(resp.url),
+        "url": final_url,
         "title": title,
         "truncated": truncated,
         "text": text[:max_chars],

@@ -189,6 +189,14 @@ def fetch_url_text(url: str, max_chars: int = 4000) -> dict:
     }
 
 
+def _like_contains(value: str) -> str:
+    """Lowercase `value` and escape LIKE metacharacters so it matches literally."""
+    lowered = value.lower()
+    for ch in ("\\", "%", "_"):
+        lowered = lowered.replace(ch, "\\" + ch)
+    return lowered
+
+
 @mcp.tool()
 def query_books(
     author: str = "",
@@ -210,11 +218,11 @@ def query_books(
     clauses = []
     args: list = []
     if author:
-        clauses.append("LOWER(author) LIKE ?")
-        args.append(f"%{author.lower()}%")
+        clauses.append(r"LOWER(author) LIKE ? ESCAPE '\'")
+        args.append(f"%{_like_contains(author)}%")
     if genre:
-        clauses.append("LOWER(genre) LIKE ?")
-        args.append(f"%{genre.lower()}%")
+        clauses.append(r"LOWER(genre) LIKE ? ESCAPE '\'")
+        args.append(f"%{_like_contains(genre)}%")
     if min_year is not None:
         clauses.append("year >= ?")
         args.append(min_year)

@@ -1,3 +1,27 @@
+[project]
+name = "mcp-tool-agent"
+version = "0.1.0"
+description = "A minimal end-to-end demonstration of the Model Context Protocol"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+dependencies = [
+    "mcp==1.29.1",
+    "openai==3.6.0",
+    "httpx==0.28.1",
+    "beautifulsoup4==4.15.0",
+    "python-dotenv==1.2.3",
+]
+
+[project.scripts]
+mcp-tool-agent = "agent:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+py-modules = ["agent", "server", "seed_books"]
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
@@ -15,3 +39,6 @@ select = ["E", "F", "W", "I", "UP", "B"]
 python_version = "3.11"
 ignore_missing_imports = true
 check_untyped_defs = true
+
+[tool.coverage.run]
+source = ["agent", "server", "seed_books"]

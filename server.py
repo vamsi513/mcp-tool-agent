@@ -7,6 +7,7 @@ Run directly for stdio transport:
 """
 
 import ipaddress
+import json
 import os
 import socket
 import sqlite3
@@ -14,6 +15,7 @@ from contextlib import closing
 from pathlib import Path
 from urllib.parse import urlparse
 
+import httpcore
 import httpx
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
@@ -38,17 +40,25 @@ READABLE_CONTENT_TYPES = (
 mcp = FastMCP("tool-agent-demo")
 
 
+def _is_non_public(ip: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
+    return (
+        ip.is_loopback
+        or ip.is_private
+        or ip.is_link_local
+        or ip.is_reserved
+        or ip.is_multicast
+        or ip.is_unspecified
+    )
+
+
 def _reject_reason(url: str) -> str | None:
     """Return a reason string if `url` is not safe to fetch, else None.
 
     Blocks non-http(s) schemes and any host that resolves to a loopback,
-    private, link-local, or otherwise non-public address. This is what keeps
-    an LLM (or an instruction hidden in a fetched page) from pointing the
-    tool at cloud metadata endpoints or services on the internal network.
-
-    Note: the host is re-resolved by the HTTP client when it connects, so a
-    hostile DNS server could still rebind between this check and the request.
-    Pinning the connection to the validated address would close that gap.
+    private, link-local, or otherwise non-public address. This is the
+    friendly first check; `_GuardedBackend` enforces the same rule at
+    connection time so a DNS rebind between here and the request cannot
+    slip past it.
     """
     parsed = urlparse(url)
     if parsed.scheme not in ("http", "https"):
@@ -63,16 +73,39 @@ def _reject_reason(url: str) -> str | None:
 
     for *_, sockaddr in addrinfo:
         ip = ipaddress.ip_address(sockaddr[0])
-        if (
-            ip.is_loopback
-            or ip.is_private
-            or ip.is_link_local
-            or ip.is_reserved
-            or ip.is_multicast
-            or ip.is_unspecified
-        ):
+        if _is_non_public(ip):
             return f"host resolves to a non-public address ({ip})"
     return None
+
+
+class _GuardedBackend(httpcore.SyncBackend):
+    """Network backend that resolves the target host itself, refuses any
+    non-public address, and connects to the exact IP it validated. TLS still
+    uses the original hostname for SNI and certificate checks, so pinning to
+    the IP closes the DNS-rebind window without breaking verification."""
+
+    def connect_tcp(self, host, port, timeout=None, local_address=None, socket_options=None):
+        chosen: str | None = None
+        for *_, sockaddr in socket.getaddrinfo(host, port, type=socket.SOCK_STREAM):
+            ip = ipaddress.ip_address(str(sockaddr[0]))
+            if _is_non_public(ip):
+                raise httpcore.ConnectError(f"blocked non-public address: {ip}")
+            if chosen is None:
+                chosen = str(sockaddr[0])
+        if chosen is None:
+            raise httpcore.ConnectError(f"could not resolve host: {host}")
+        return super().connect_tcp(
+            chosen, port, timeout=timeout,
+            local_address=local_address, socket_options=socket_options,
+        )
+
+
+class _GuardedTransport(httpx.HTTPTransport):
+    """httpx transport wired to use `_GuardedBackend`."""
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._pool._network_backend = _GuardedBackend()
 
 
 @mcp.tool()
@@ -145,16 +178,18 @@ def fetch_url_text(url: str, max_chars: int = 4000) -> dict:
     summarize. `max_chars` truncates the returned text (500-20000).
 
     Only fetches http(s) URLs on public hosts: requests to loopback, private,
-    or link-local addresses are refused, as are responses over 5 MB or with a
-    non-text content type. On any of these the result has an `error` field
-    and an empty `text`.
+    or link-local addresses are refused (at connection time, pinned to the
+    validated IP), as are responses over 5 MB or with a non-text content
+    type. On any of these the result has an `error` field and an empty `text`.
     """
     max_chars = max(500, min(max_chars, 20000))
 
     headers = {"User-Agent": USER_AGENT}
     current = url
     try:
-        with httpx.Client(timeout=20, follow_redirects=False) as client:
+        with httpx.Client(
+            timeout=20, follow_redirects=False, transport=_GuardedTransport()
+        ) as client:
             for _ in range(MAX_REDIRECTS + 1):
                 reason = _reject_reason(current)
                 if reason:
@@ -258,6 +293,32 @@ def query_books(
 
     results = [dict(row) for row in rows]
     return {"count": len(results), "results": results}
+
+
+@mcp.resource("books://schema", mime_type="text/plain")
+def books_schema() -> str:
+    """Columns available in the book catalog, for building query_books calls."""
+    return (
+        "books table columns:\n"
+        "  title   TEXT\n"
+        "  author  TEXT\n"
+        "  year    INTEGER\n"
+        "  genre   TEXT    one of: science fiction, fantasy, literary\n"
+        "  rating  REAL    0.0 - 5.0\n"
+    )
+
+
+@mcp.resource("books://catalog", mime_type="application/json")
+def books_catalog() -> str:
+    """The full book catalog as a JSON array."""
+    if not DB_PATH.exists():
+        return json.dumps({"error": "books.db not found; run seed_books.py first"})
+    with closing(sqlite3.connect(DB_PATH)) as conn:
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute(
+            "SELECT title, author, year, genre, rating FROM books ORDER BY author, year"
+        ).fetchall()
+    return json.dumps([dict(row) for row in rows], indent=2)
 
 
 if __name__ == "__main__":

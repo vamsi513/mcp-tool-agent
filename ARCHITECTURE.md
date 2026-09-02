@@ -12,11 +12,12 @@ shortcuts around it.
 ```
   agent.py  ──spawns──▶  server.py
      │                      │
-     │   stdio (JSON-RPC)   │
-     │◀────────────────────▶│
-     │                      ├─ search_github_repos  ──▶ api.github.com
-     │                      ├─ fetch_url_text        ──▶ arbitrary http(s)
-     │                      └─ query_books           ──▶ books.db (SQLite)
+     │   stdio (JSON-RPC)   │   tools:
+     │◀────────────────────▶│     search_github_repos  ──▶ api.github.com
+     │                      │     fetch_url_text        ──▶ public http(s) only
+     │                      │     query_books           ──▶ books.db (SQLite)
+     │                      │   resources:
+     │                      │     books://schema, books://catalog
      │
      └──▶ OpenAI chat.completions (tool calling)
 ```
@@ -59,20 +60,31 @@ returning nothing.
 API. `mcp_tools_to_openai` is the only provider-specific glue; swapping
 providers means replacing that function and the client call.
 
+**Resources are exposed but not force-fed.** The server publishes
+`books://schema` and `books://catalog`. In MCP, resources are context a host
+or user attaches deliberately, not something the model pulls. The agent
+demonstrates `resources/list` + `resources/read`, and injects only resources
+under ~600 characters (the schema) into the system prompt — enough to help
+the model form good `query_books` calls without dumping the whole catalog and
+letting it answer data questions without calling a tool.
+
 ## Security model
 
 The server runs tools chosen by an LLM, and one of them fetches arbitrary
 URLs. That is the main risk surface.
 
-- **`fetch_url_text` blocks non-public destinations.** Before each request
-  (including every redirect hop) the host is resolved and rejected if it maps
-  to a loopback, private, link-local, reserved, multicast, or unspecified
-  address. This is what stops the tool being pointed at cloud metadata
-  endpoints (`169.254.169.254`) or internal services, whether the bad URL
-  comes from the model or from an instruction hidden inside a fetched page.
-  Residual gap: the HTTP client re-resolves the host when it connects, so a
-  hostile DNS server could rebind between the check and the request. Pinning
-  the connection to the validated IP would close it.
+- **`fetch_url_text` blocks non-public destinations, at two layers.** A
+  friendly pre-check resolves the host and rejects loopback / private /
+  link-local / reserved / multicast / unspecified addresses, on the initial
+  URL and every redirect hop, returning a readable `error`. Underneath,
+  `_GuardedBackend` (a custom `httpcore` network backend) re-does that check
+  at connection time and connects to the *exact* IP it validated — TLS still
+  uses the original hostname for SNI and certificate verification. Because
+  enforcement happens at connect time against a pinned address, a DNS server
+  that rebinds between the pre-check and the request cannot slip past it.
+  This is what stops the tool being pointed at cloud metadata endpoints
+  (`169.254.169.254`) or internal services, whether the bad URL comes from
+  the model or from an instruction hidden inside a fetched page.
 - **Response size is capped** at 5 MB and read incrementally, so a huge or
   endless response cannot exhaust memory.
 - **Only text-like content types** are parsed; anything else is refused.
@@ -88,15 +100,16 @@ URLs. That is the main risk surface.
 ## Testing
 
 `tests/` covers the tool logic with mocked HTTP (`httpx.MockTransport`), the
-SSRF guard including the redirect-hop case, a real stdio round-trip that
-spawns the server and exercises `initialize` / `tools/list` / `tools/call`,
-and `agent.run()` driven by a scripted LLM while the tools execute against
-that real server. CI also runs `ruff` and `mypy`. `TEST_RUN.md` is captured
-output from running the agent against a live model, kept as evidence rather
-than as an automated check.
+SSRF pre-check and the `_GuardedBackend` enforcement (including IP pinning),
+`resources/list` + `resources/read`, a real stdio round-trip that spawns the
+server and exercises `initialize` / `tools/list` / `tools/call`, and
+`agent.run()` driven by a scripted LLM while the tools execute against that
+real server. CI also runs `ruff` and `mypy`. `TEST_RUN.md` is captured output
+from running the agent against a live model, kept as evidence rather than as
+an automated check.
 
 ## What is deliberately not here
 
-Auth, a second transport, resources/prompts (only tools), streaming answers,
-conversation memory across runs, and multi-provider support. Each would be
-straightforward to add; none is needed to demonstrate the protocol.
+Auth, a second transport, MCP prompts, streaming answers, conversation memory
+across runs, and multi-provider support. Each would be straightforward to add;
+none is needed to demonstrate the protocol.

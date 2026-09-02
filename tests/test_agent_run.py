@@ -70,6 +70,11 @@ async def test_run_executes_tool_call_then_answers(scripted_openai):
     # the tool result really came back through MCP and was fed to the model
     tool_messages = [m for m in client.requests[1]["messages"] if m.get("role") == "tool"]
     assert tool_messages and '"count": 4' in tool_messages[0]["content"]
+    # the small books://schema resource was read over MCP and put in context
+    system_text = " ".join(
+        m["content"] for m in client.requests[0]["messages"] if m["role"] == "system"
+    )
+    assert "books://schema" in system_text and "rating  REAL" in system_text
 
 
 async def test_run_forces_answer_without_tools_on_final_turn(scripted_openai):

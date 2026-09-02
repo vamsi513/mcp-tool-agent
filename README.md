@@ -14,16 +14,19 @@ security model.
 ## The server
 
 `server.py` is a `FastMCP` server named `tool-agent-demo` that speaks over
-stdio. It exposes:
+stdio. It exposes three tools:
 
 | Tool | Description | Inputs |
 |---|---|---|
 | `search_github_repos` | Lists a GitHub user's public repos, filtered by a substring match on name/description. Calls the live GitHub REST API, following pagination up to 10 pages. | `username` (str), `query` (str, optional), `limit` (int 1–20, default 5) |
-| `fetch_url_text` | Fetches a web page and returns its visible text (scripts/styles/nav stripped) plus the title. Rejects non-public hosts, oversized responses, and non-text content. | `url` (http/https), `max_chars` (int 500–20000, default 4000) |
+| `fetch_url_text` | Fetches a web page and returns its visible text (scripts/styles/nav stripped) plus the title. Refuses non-public hosts (enforced at connection time, pinned to the validated IP), oversized responses, and non-text content. | `url` (http/https), `max_chars` (int 500–20000, default 4000) |
 | `query_books` | Queries a local SQLite database of 20 books. Filters are AND-combined; results ordered by rating descending. | `author` (substring), `genre` (substring), `min_year` (int or null), `min_rating` (float or null), `limit` (int 1–20, default 10) |
 
 Each tool's input schema is generated from its typed signature and returned
 in `tools/list`.
+
+It also exposes two **resources**: `books://schema` (the catalog's columns)
+and `books://catalog` (the full catalog as JSON).
 
 ## The agent
 
@@ -31,11 +34,12 @@ in `tools/list`.
 
 1. Spawns `server.py` and connects over stdio with the MCP client.
 2. Runs the `initialize` handshake, then `tools/list`.
-3. Converts the MCP tool definitions into the LLM's tool-calling format.
-4. Asks the LLM (OpenAI, `gpt-4o-mini` by default) to answer, with the tools available.
-5. For each tool call the model returns, executes it via `tools/call` and feeds the result back. Bad tool arguments and protocol errors are turned into text the model can react to.
-6. On the final turn the tools are withheld so the model must answer from what it has.
-7. Prints the model's answer.
+3. Runs `resources/list` and reads the small ones (the schema) into the system prompt.
+4. Converts the MCP tool definitions into the LLM's tool-calling format.
+5. Asks the LLM (OpenAI, `gpt-4o-mini` by default) to answer, with the tools available.
+6. For each tool call the model returns, executes it via `tools/call` and feeds the result back. Bad tool arguments and protocol errors are turned into text the model can react to.
+7. On the final turn the tools are withheld so the model must answer from what it has.
+8. Prints the model's answer.
 
 Transient LLM errors are retried with backoff. Every protocol step and token
 usage is logged to stderr with an `[agent]` prefix.
@@ -109,8 +113,9 @@ mypy server.py agent.py seed_books.py
 pytest -q --cov
 ```
 
-The suite covers the tool logic with mocked HTTP, the SSRF guard (including
-the redirect-hop case), a real stdio round-trip that spawns the server, and
+The suite covers the tool logic with mocked HTTP, the SSRF pre-check and the
+connection-time backend guard (including IP pinning), `resources/list` and
+`resources/read`, a real stdio round-trip that spawns the server, and
 `agent.run()` driven by a scripted LLM against that real server. CI runs
 ruff, mypy, and the suite on Python 3.11–3.13.
 

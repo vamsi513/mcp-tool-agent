@@ -29,6 +29,7 @@ load_dotenv()
 DEFAULT_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 DEFAULT_MAX_TURNS = int(os.getenv("AGENT_MAX_TURNS", "5"))
 RETRY_ATTEMPTS = 3
+MAX_RESOURCE_CHARS = 600
 
 
 def _temperature():
@@ -76,6 +77,26 @@ def tool_result_text(result) -> str:
         else:
             parts.append(str(block))
     return "\n".join(parts) if parts else "(no content)"
+
+
+async def gather_small_resources(session: ClientSession) -> str:
+    """List the server's resources and read the small ones into a single
+    reference block. Large resources (e.g. a full data dump) are listed but
+    left for a host to attach deliberately rather than pulled into context."""
+    try:
+        listed = await session.list_resources()
+    except McpError:
+        return ""
+    log("resources/list returned", [str(r.uri) for r in listed.resources])
+
+    blocks = []
+    for resource in listed.resources:
+        payload = await session.read_resource(resource.uri)
+        text = "".join(getattr(c, "text", "") for c in payload.contents)
+        if 0 < len(text) <= MAX_RESOURCE_CHARS:
+            blocks.append(f"{resource.uri}:\n{text}")
+            log("resources/read pulled into context", str(resource.uri))
+    return "\n\n".join(blocks)
 
 
 async def complete_with_retry(client: OpenAI, **kwargs):
@@ -134,6 +155,13 @@ async def run(question: str, model: str, max_turns: int) -> str:
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": question},
             ]
+
+            reference = await gather_small_resources(session)
+            if reference:
+                messages.insert(1, {
+                    "role": "system",
+                    "content": "Reference data from the server:\n\n" + reference,
+                })
 
             for turn in range(1, max_turns + 1):
                 # On the last turn, drop the tools so the model has to answer

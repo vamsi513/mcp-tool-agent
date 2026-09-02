@@ -45,3 +45,16 @@ async def test_schema_validation_error_is_flagged():
             result = await session.call_tool("query_books", {"min_rating": "high"})
 
     assert result.isError
+
+
+async def test_resources_are_listed_and_readable():
+    async with await _session() as (read, write):
+        async with ClientSession(read, write) as session:
+            await session.initialize()
+            uris = {str(r.uri) for r in (await session.list_resources()).resources}
+            schema = await session.read_resource("books://schema")
+            catalog = await session.read_resource("books://catalog")
+
+    assert uris == {"books://schema", "books://catalog"}
+    assert "genre" in schema.contents[0].text
+    assert len(json.loads(catalog.contents[0].text)) == 20

@@ -6,9 +6,12 @@ Run directly for stdio transport:
     python server.py
 """
 
+import ipaddress
 import os
+import socket
 import sqlite3
 from pathlib import Path
+from urllib.parse import urlparse
 
 import httpx
 from bs4 import BeautifulSoup
@@ -20,8 +23,46 @@ load_dotenv()
 DB_PATH = Path(__file__).parent / "books.db"
 GITHUB_API = "https://api.github.com"
 USER_AGENT = "mcp-tool-agent/0.1"
+MAX_REDIRECTS = 5
 
 mcp = FastMCP("tool-agent-demo")
+
+
+def _reject_reason(url: str) -> str | None:
+    """Return a reason string if `url` is not safe to fetch, else None.
+
+    Blocks non-http(s) schemes and any host that resolves to a loopback,
+    private, link-local, or otherwise non-public address. This is what keeps
+    an LLM (or an instruction hidden in a fetched page) from pointing the
+    tool at cloud metadata endpoints or services on the internal network.
+
+    Note: the host is re-resolved by the HTTP client when it connects, so a
+    hostile DNS server could still rebind between this check and the request.
+    Pinning the connection to the validated address would close that gap.
+    """
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https"):
+        return "url must start with http:// or https://"
+    if not parsed.hostname:
+        return "url has no host"
+
+    try:
+        addrinfo = socket.getaddrinfo(parsed.hostname, parsed.port or 0)
+    except socket.gaierror as exc:
+        return f"could not resolve host: {exc}"
+
+    for family, _, _, _, sockaddr in addrinfo:
+        ip = ipaddress.ip_address(sockaddr[0])
+        if (
+            ip.is_loopback
+            or ip.is_private
+            or ip.is_link_local
+            or ip.is_reserved
+            or ip.is_multicast
+            or ip.is_unspecified
+        ):
+            return f"host resolves to a non-public address ({ip})"
+    return None
 
 
 @mcp.tool()
@@ -81,13 +122,23 @@ def fetch_url_text(url: str, max_chars: int = 4000) -> dict:
     summarize. `max_chars` truncates the returned text (500-20000).
     """
     max_chars = max(500, min(max_chars, 20000))
-    if not url.startswith(("http://", "https://")):
-        return {"error": "url must start with http:// or https://", "text": ""}
 
     headers = {"User-Agent": USER_AGENT}
+    current = url
     try:
-        with httpx.Client(timeout=20, follow_redirects=True) as client:
-            resp = client.get(url, headers=headers)
+        with httpx.Client(timeout=20, follow_redirects=False) as client:
+            for _ in range(MAX_REDIRECTS + 1):
+                reason = _reject_reason(current)
+                if reason:
+                    return {"error": reason, "text": ""}
+
+                resp = client.get(current, headers=headers)
+                if resp.is_redirect and resp.has_redirect_location:
+                    current = str(resp.next_request.url)
+                    continue
+                break
+            else:
+                return {"error": "too many redirects", "text": ""}
     except httpx.RequestError as exc:
         return {"error": f"request failed: {exc}", "text": ""}
 

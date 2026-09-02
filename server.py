@@ -193,8 +193,8 @@ def fetch_url_text(url: str, max_chars: int = 4000) -> dict:
 def query_books(
     author: str = "",
     genre: str = "",
-    min_year: int = 0,
-    min_rating: float = 0.0,
+    min_year: int | None = None,
+    min_rating: float | None = None,
     limit: int = 10,
 ) -> dict:
     """Query the local book database.
@@ -215,10 +215,10 @@ def query_books(
     if genre:
         clauses.append("LOWER(genre) LIKE ?")
         args.append(f"%{genre.lower()}%")
-    if min_year:
+    if min_year is not None:
         clauses.append("year >= ?")
         args.append(min_year)
-    if min_rating:
+    if min_rating is not None:
         clauses.append("rating >= ?")
         args.append(min_rating)
 

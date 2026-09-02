@@ -80,11 +80,12 @@ def complete_with_retry(client: OpenAI, **kwargs):
             return client.chat.completions.create(**kwargs)
         except (APIConnectionError, RateLimitError, APIStatusError) as exc:
             status = getattr(exc, "status_code", None)
-            retryable = isinstance(exc, (APIConnectionError, RateLimitError)) or status in (500, 502, 503, 504)
-            if not retryable or attempt == RETRY_ATTEMPTS:
+            transient = isinstance(exc, (APIConnectionError, RateLimitError))
+            if not (transient or status in (500, 502, 503, 504)) or attempt == RETRY_ATTEMPTS:
                 raise
             wait = 2 ** (attempt - 1)
-            log(f"LLM call failed ({exc.__class__.__name__}), retrying in {wait}s", {"attempt": attempt})
+            log(f"LLM call failed ({exc.__class__.__name__}), retrying in {wait}s",
+                {"attempt": attempt})
             time.sleep(wait)
 
 
@@ -180,7 +181,8 @@ async def run(question: str, model: str, max_turns: int) -> str:
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("question", help="the question to answer")
-    parser.add_argument("--model", default=DEFAULT_MODEL, help=f"model to use (default: {DEFAULT_MODEL})")
+    parser.add_argument("--model", default=DEFAULT_MODEL,
+                        help=f"model to use (default: {DEFAULT_MODEL})")
     parser.add_argument("--max-turns", type=int, default=DEFAULT_MAX_TURNS,
                         help=f"max LLM turns before giving up (default: {DEFAULT_MAX_TURNS})")
     args = parser.parse_args()

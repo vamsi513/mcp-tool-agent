@@ -33,7 +33,10 @@ def test_rejects_public_host_that_resolves_to_private_ip(monkeypatch):
 
 
 def test_happy_path_extracts_title_and_text(mock_http):
-    html = "<html><head><title> Hi </title></head><body><p>Hello world</p><script>x</script></body></html>"
+    html = (
+        "<html><head><title> Hi </title></head>"
+        "<body><p>Hello world</p><script>x</script></body></html>"
+    )
     mock_http(lambda req: httpx.Response(200, headers={"content-type": "text/html"}, text=html))
     result = server.fetch_url_text("https://example.com/page")
     assert result["title"] == "Hi"
@@ -42,8 +45,11 @@ def test_happy_path_extracts_title_and_text(mock_http):
 
 
 def test_non_text_content_type_is_rejected(mock_http):
-    mock_http(lambda req: httpx.Response(200, headers={"content-type": "application/json"}, text="{}"))
-    assert "unsupported content type" in server.fetch_url_text("https://example.com/data")["error"]
+    mock_http(
+        lambda req: httpx.Response(200, headers={"content-type": "application/json"}, text="{}")
+    )
+    error = server.fetch_url_text("https://example.com/data")["error"]
+    assert "unsupported content type" in error
 
 
 def test_response_larger_than_cap_is_rejected(mock_http):

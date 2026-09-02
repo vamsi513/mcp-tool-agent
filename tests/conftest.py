@@ -3,8 +3,8 @@ import sqlite3
 import httpx
 import pytest
 
-import server
 import seed_books
+import server
 
 
 @pytest.fixture

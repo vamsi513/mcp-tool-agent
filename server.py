@@ -27,7 +27,13 @@ USER_AGENT = "mcp-tool-agent/0.1"
 MAX_REDIRECTS = 5
 MAX_GITHUB_PAGES = 10
 MAX_RESPONSE_BYTES = 5 * 1024 * 1024
-READABLE_CONTENT_TYPES = ("text/html", "text/plain", "application/xhtml+xml", "application/xml", "text/xml")
+READABLE_CONTENT_TYPES = (
+    "text/html",
+    "text/plain",
+    "application/xhtml+xml",
+    "application/xml",
+    "text/xml",
+)
 
 mcp = FastMCP("tool-agent-demo")
 
@@ -55,7 +61,7 @@ def _reject_reason(url: str) -> str | None:
     except socket.gaierror as exc:
         return f"could not resolve host: {exc}"
 
-    for family, _, _, _, sockaddr in addrinfo:
+    for *_, sockaddr in addrinfo:
         ip = ipaddress.ip_address(sockaddr[0])
         if (
             ip.is_loopback
@@ -153,7 +159,8 @@ def fetch_url_text(url: str, max_chars: int = 4000) -> dict:
                     if resp.status_code != 200:
                         return {"error": f"HTTP {resp.status_code}", "text": ""}
 
-                    content_type = resp.headers.get("content-type", "").split(";")[0].strip().lower()
+                    raw_type = resp.headers.get("content-type", "")
+                    content_type = raw_type.split(";")[0].strip().lower()
                     if content_type and content_type not in READABLE_CONTENT_TYPES:
                         return {"error": f"unsupported content type: {content_type}", "text": ""}
 
@@ -231,7 +238,10 @@ def query_books(
         args.append(min_rating)
 
     where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
-    sql = f"SELECT title, author, year, genre, rating FROM books {where} ORDER BY rating DESC LIMIT ?"
+    sql = (
+        f"SELECT title, author, year, genre, rating FROM books {where} "
+        "ORDER BY rating DESC LIMIT ?"
+    )
     args.append(limit)
 
     with closing(sqlite3.connect(DB_PATH)) as conn:

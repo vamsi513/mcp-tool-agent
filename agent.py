@@ -20,11 +20,23 @@ from typing import Any
 
 from dotenv import load_dotenv
 from mcp import ClientSession, StdioServerParameters
-from mcp.client.stdio import stdio_client
+from mcp.client.stdio import get_default_environment, stdio_client
 from mcp.shared.exceptions import McpError
 from openai import APIConnectionError, APIStatusError, OpenAI, RateLimitError
 
+import metering
+
 load_dotenv()
+
+# Variables the governed server needs that stdio_client does not forward.
+FORWARDED_ENV = (
+    "GOVERNANCE_DB",
+    "POLICY_FILE",
+    "PRICES_FILE",
+    "GITHUB_TOKEN",
+    "GITHUB_API_BASE",
+    "PENDING_ACTION_TTL_SECONDS",
+)
 
 DEFAULT_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 DEFAULT_MAX_TURNS = int(os.getenv("AGENT_MAX_TURNS", "5"))
@@ -136,8 +148,37 @@ async def call_tool_safely(session: ClientSession, name: str, arguments_json: st
     return text
 
 
-async def run(question: str, model: str, max_turns: int) -> str:
-    server = StdioServerParameters(command=sys.executable, args=["server.py"])
+def server_parameters(user: str | None, policy_file: str | None) -> StdioServerParameters:
+    """Which server to spawn: the plain one, or the governed one for a user.
+
+    stdio_client only forwards a handful of environment variables to the
+    child, so anything the governed server needs is passed explicitly.
+    """
+    if not user:
+        return StdioServerParameters(command=sys.executable, args=["server.py"])
+
+    env = dict(get_default_environment())
+    for name in FORWARDED_ENV:
+        value = os.getenv(name)
+        if value:
+            env[name] = value
+    env["MCP_AGENT_USER"] = user
+    if policy_file:
+        env["POLICY_FILE"] = policy_file
+
+    return StdioServerParameters(
+        command=sys.executable, args=["governed_server.py", "--user", user], env=env
+    )
+
+
+async def run(
+    question: str,
+    model: str,
+    max_turns: int,
+    user: str | None = None,
+    policy_file: str | None = None,
+) -> str:
+    server = server_parameters(user, policy_file)
 
     async with stdio_client(server) as (read, write):
         async with ClientSession(read, write) as session:
@@ -181,6 +222,13 @@ async def run(question: str, model: str, max_turns: int) -> str:
                         "prompt": completion.usage.prompt_tokens,
                         "completion": completion.usage.completion_tokens,
                     })
+                    if user:
+                        metering.record_llm_turn(
+                            user=user,
+                            model=model,
+                            input_tokens=completion.usage.prompt_tokens,
+                            output_tokens=completion.usage.completion_tokens,
+                        )
 
                 choice = completion.choices[0].message
                 if not choice.tool_calls:
@@ -206,6 +254,8 @@ async def run(question: str, model: str, max_turns: int) -> str:
                 )
 
                 for tc in choice.tool_calls:
+                    if user:
+                        metering.record_tool_call(user=user, tool=tc.function.name)
                     text = await call_tool_safely(session, tc.function.name, tc.function.arguments)
                     messages.append(
                         {"role": "tool", "tool_call_id": tc.id, "content": text}
@@ -221,6 +271,11 @@ def main():
                         help=f"model to use (default: {DEFAULT_MODEL})")
     parser.add_argument("--max-turns", type=int, default=DEFAULT_MAX_TURNS,
                         help=f"max LLM turns before giving up (default: {DEFAULT_MAX_TURNS})")
+    parser.add_argument("--user", default=os.getenv("MCP_AGENT_USER") or None,
+                        help="run against the governed server as this policy user, "
+                             "recording usage (default: the ungoverned server)")
+    parser.add_argument("--policy", default=None,
+                        help="policy file to enforce when --user is given (or POLICY_FILE)")
     args = parser.parse_args()
 
     if not os.getenv("OPENAI_API_KEY"):
@@ -228,7 +283,9 @@ def main():
     if args.max_turns < 1:
         sys.exit("--max-turns must be at least 1")
 
-    answer = asyncio.run(run(args.question, args.model, args.max_turns))
+    answer = asyncio.run(
+        run(args.question, args.model, args.max_turns, args.user, args.policy)
+    )
     print("\n" + answer)
 
 

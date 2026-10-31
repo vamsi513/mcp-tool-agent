@@ -11,3 +11,8 @@ books.db
 *.egg-info/
 build/
 dist/
+governance.db
+governance.db-wal
+governance.db-shm
+policy.yaml
+prices.yaml

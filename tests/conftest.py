@@ -3,6 +3,7 @@ import sqlite3
 import httpx
 import pytest
 
+import connector_github
 import seed_books
 import server
 
@@ -37,4 +38,39 @@ def mock_http(monkeypatch):
 
         monkeypatch.setattr(server.httpx, "Client", factory)
 
+    return install
+
+
+@pytest.fixture
+def governance_db(tmp_path, monkeypatch):
+    """Point the audit log, usage meter and pending actions at a temp database."""
+    path = tmp_path / "governance.db"
+    monkeypatch.setenv("GOVERNANCE_DB", str(path))
+    return path
+
+
+@pytest.fixture
+def mock_github(monkeypatch):
+    """Replace httpx.Client inside connector_github and record every request.
+
+    Returns the list of (method, path) pairs the connector issued, so a test
+    can assert that no POST went out.
+    """
+    calls: list[tuple[str, str]] = []
+
+    def install(handler):
+        real_client = httpx.Client
+
+        def recording(request: httpx.Request) -> httpx.Response:
+            calls.append((request.method, request.url.path))
+            return handler(request)
+
+        def factory(*args, **kwargs):
+            kwargs["transport"] = httpx.MockTransport(recording)
+            return real_client(*args, **kwargs)
+
+        monkeypatch.setattr(connector_github.httpx, "Client", factory)
+        return calls
+
+    install.calls = calls  # type: ignore[attr-defined]
     return install

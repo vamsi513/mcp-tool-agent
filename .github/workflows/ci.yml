@@ -23,8 +23,20 @@ jobs:
       - name: Lint
         run: ruff check .
       - name: Type check
-        run: mypy server.py agent.py seed_books.py
+        run: |
+          mypy server.py agent.py seed_books.py \
+               policy.py audit.py store.py connector_github.py \
+               governed_server.py metering.py govctl.py \
+               evals/run_evals.py evals/stub_github.py
       - name: Seed the sample database
         run: python seed_books.py
+      - name: Check the committed policy and price files parse
+        run: |
+          python -c "import policy; policy.load_policy('policy.example.yaml')"
+          python -c "import metering; metering.load_prices('prices.example.yaml')"
+      # The suite runs the evaluation harness in fake mode against a local
+      # stub, so nothing here reaches github.com or an LLM provider. The live
+      # GitHub test skips itself without GITHUB_TOKEN, which CI does not set,
+      # and the real-model eval run is never invoked here.
       - name: Run tests
         run: pytest -q --cov --cov-report=term-missing

@@ -487,7 +487,15 @@ unauthorised user ever wrote.
   and a length. Expired rows are not currently swept.
 - **At-most-once writes.** `confirm_issue_comment` claims the pending id before
   the POST. If the POST then fails the id is spent and a fresh prepare is
-  needed. That is deliberate: double-posting is worse than retrying.
+  needed. That is deliberate: double-posting is worse than retrying. The
+  concurrent case is covered by `tests/test_confirm_concurrency.py`: 20 trials
+  with two OS threads on separate connections plus 5 trials with two separate
+  processes, each run, repeated 20 times for 500 races in total, every one
+  producing exactly one POST. Removing the conditional guard from the claiming
+  UPDATE was shown to make both tests fail with two POSTs, so the race window
+  is genuinely being exercised rather than missed. This covers SQLite on a
+  single machine only; it says nothing about a networked database, where the
+  same claim would depend on that engine's isolation guarantees.
 - **`GITHUB_API_BASE` is operator configuration.** It exists so the evaluation
   harness can point at a local stub and so a GitHub Enterprise host works.
   Nothing a caller or a model sends can set it, and unlike `fetch_url_text`

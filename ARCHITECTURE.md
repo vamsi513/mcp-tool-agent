@@ -28,8 +28,8 @@ They only ever talk over the protocol.
 ## Choices and why
 
 **stdio transport.** The server is launched as a subprocess and speaks
-JSON-RPC over stdin/stdout. This is the transport every MCP host (Claude
-Desktop, IDE integrations) uses for local servers, it needs no ports or auth,
+JSON-RPC over stdin/stdout. This is the transport every MCP host (a desktop
+MCP client, IDE integrations) uses for local servers, it needs no ports or auth,
 and it keeps the demo to two files you can run directly. An HTTP/SSE transport
 would matter for a remotely hosted server; it is out of scope here.
 

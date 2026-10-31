@@ -1,0 +1,71 @@
+# Access rules for the governed MCP server.
+#
+# Schema
+# ------
+# version: integer, informational only.
+#
+# users:
+#   <user-id>:
+#     role: <role-name>        required; must exist under `roles`
+#
+# roles:
+#   <role-name>:
+#     tools: [<tool-name>, ...]   tools this role may call; absent means none
+#     rules:                      optional per-tool argument restrictions
+#       <tool-name>:
+#         repos: ["owner/name"]   the `repo` argument must be one of these
+#         owners: ["owner"]       the owner half of `repo`, or `username`,
+#                                 must be one of these
+#         max_limit: 20           the `limit` argument may not exceed this
+#         max_body_chars: 500     the `body` argument may not be longer
+#
+# Anything not listed is denied. A user with no entry is denied everything.
+# Only `repos`, `owners`, `max_limit` and `max_body_chars` are understood;
+# any other key under `rules` is rejected when the file is loaded.
+
+version: 1
+
+users:
+  alice:
+    role: maintainer
+  bob:
+    role: reader
+  reporting-job:
+    role: reader
+
+roles:
+  reader:
+    tools:
+      - query_books
+      - fetch_url_text
+      - search_github_repos
+      - list_issues
+      - get_issue
+    rules:
+      list_issues:
+        owners: ["python", "octocat"]
+        max_limit: 20
+      get_issue:
+        owners: ["python", "octocat"]
+      search_github_repos:
+        owners: ["python", "octocat"]
+        max_limit: 10
+
+  maintainer:
+    tools:
+      - query_books
+      - fetch_url_text
+      - search_github_repos
+      - list_issues
+      - get_issue
+      - prepare_issue_comment
+      - confirm_issue_comment
+    rules:
+      list_issues:
+        owners: ["python", "octocat"]
+        max_limit: 50
+      get_issue:
+        owners: ["python", "octocat"]
+      prepare_issue_comment:
+        owners: ["octocat"]
+        max_body_chars: 2000

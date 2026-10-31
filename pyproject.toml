@@ -11,6 +11,7 @@ dependencies = [
     "httpcore==1.0.9",
     "beautifulsoup4==4.15.0",
     "python-dotenv==1.2.3",
+    "PyYAML==6.0.3",
 ]
 
 [project.scripts]

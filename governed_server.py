@@ -120,14 +120,33 @@ def govern(name: str, fn: Callable[..., Any], user: str, policy: Policy) -> Call
     return wrapper
 
 
-def build(user: str, policy: Policy) -> FastMCP:
-    """Create a server exposing only the tools `user` is allowed to call."""
-    mcp = FastMCP("tool-agent-governed")
+class GovernedMCP(FastMCP):
+    """FastMCP that advertises only the tools the caller's role allows.
 
-    allowed = policy.tools_for(user)
+    Every tool is still registered, so a caller that names a tool it was not
+    told about reaches the policy wrapper and gets an audited denial rather
+    than an unlogged "unknown tool". Filtering happens in the listing only.
+    """
+
+    def __init__(self, *args: Any, allowed_tools: frozenset[str], **kwargs: Any) -> None:
+        self._allowed_tools = allowed_tools
+        super().__init__(*args, **kwargs)
+
+    async def list_tools(self) -> list[Any]:
+        tools = await super().list_tools()
+        return [tool for tool in tools if tool.name in self._allowed_tools]
+
+
+def build(user: str, policy: Policy) -> FastMCP:
+    """Create a server that advertises only what `user` may call.
+
+    All tools are registered behind the policy wrapper; tools/list is
+    filtered, so the model is never shown a tool it cannot use, and a call to
+    a hidden tool is still denied and audited.
+    """
+    mcp = GovernedMCP("tool-agent-governed", allowed_tools=policy.tools_for(user))
+
     for name, fn in TOOL_REGISTRY.items():
-        if name not in allowed:
-            continue
         mcp.add_tool(govern(name, fn, user, policy), name=name)
 
     # The book resources are reference context, not actions, and are not

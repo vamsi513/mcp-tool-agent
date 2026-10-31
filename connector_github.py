@@ -25,9 +25,21 @@ import httpx
 
 from store import connect
 
-GITHUB_API = "https://api.github.com"
 USER_AGENT = "mcp-tool-agent-connector/0.1"
 TIMEOUT_SECONDS = 15
+
+
+def api_base() -> str:
+    """Base URL for the GitHub API.
+
+    Overridable with GITHUB_API_BASE so the evaluation harness can point at a
+    local stub, and so a GitHub Enterprise host can be used. This is operator
+    configuration, never something a caller or a model can set.
+    """
+    base = os.getenv("GITHUB_API_BASE", "").strip() or "https://api.github.com"
+    if not base.startswith(("http://", "https://")):
+        raise ConnectorError("GITHUB_API_BASE must start with http:// or https://")
+    return base.rstrip("/")
 
 REPO_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,99}/[A-Za-z0-9][A-Za-z0-9._-]{0,99}$")
 VALID_STATES = ("open", "closed", "all")
@@ -157,7 +169,7 @@ def _raise_for_status(resp: httpx.Response) -> None:
 def _request(method: str, path: str, **kwargs: Any) -> httpx.Response:
     try:
         with httpx.Client(timeout=TIMEOUT_SECONDS) as client:
-            resp = client.request(method, f"{GITHUB_API}{path}", headers=_headers(), **kwargs)
+            resp = client.request(method, f"{api_base()}{path}", headers=_headers(), **kwargs)
     except httpx.RequestError as exc:
         raise ConnectorError(f"request to GitHub failed: {exc.__class__.__name__}") from exc
     _raise_for_status(resp)

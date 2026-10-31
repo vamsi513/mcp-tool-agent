@@ -43,4 +43,15 @@ ignore_missing_imports = true
 check_untyped_defs = true
 
 [tool.coverage.run]
-source = ["agent", "server", "seed_books"]
+source = [
+    "agent",
+    "server",
+    "seed_books",
+    "audit",
+    "connector_github",
+    "govctl",
+    "governed_server",
+    "metering",
+    "policy",
+    "store",
+]

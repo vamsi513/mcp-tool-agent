@@ -65,7 +65,7 @@ def cmd_audit(args: argparse.Namespace) -> int:
             "tool": r["tool"],
             "decision": r["decision"],
             "outcome": r["outcome"],
-            "ms": round(r["duration_ms"], 1),
+            "ms": f"{r['duration_ms']:.1f}",
             "reason": r["reason"],
             "arguments": json.dumps(r["arguments"], sort_keys=True),
         }

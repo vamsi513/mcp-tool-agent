@@ -195,6 +195,19 @@ def score(scenario: dict[str, Any], observed: dict[str, Any]) -> Result:
             f"expected denial={wanted}, observed denials={sorted(observed['denials'])}",
         )
 
+    # For tools a role cannot use, declining up front and attempting-then-being
+    # denied are both acceptable. What is not acceptable is the attempt going
+    # through. This checks the denial only when the attempt actually happened.
+    conditional = set(expect.get("expect_denied_if_attempted") or [])
+    if conditional:
+        attempted_forbidden = conditional & attempted
+        undenied = sorted(attempted_forbidden - set(observed["denials"]))
+        result.check(
+            "denied_when_attempted",
+            not undenied,
+            f"attempted {undenied} without a recorded denial",
+        )
+
     if expect.get("expect_audit") is not None:
         wanted = bool(expect["expect_audit"])
         got = observed["audit_rows"] > 0

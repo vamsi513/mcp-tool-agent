@@ -46,30 +46,69 @@ from tests.delivery_eval_core import (  # noqa: E402
 
 CITATION_PATTERN = re.compile(r"\d{2,}")
 
+NUMBER_WORDS = {
+    0: "zero", 1: "one", 2: "two", 3: "three", 4: "four", 5: "five", 6: "six",
+    7: "seven", 8: "eight", 9: "nine", 10: "ten", 11: "eleven", 12: "twelve",
+    13: "thirteen", 14: "fourteen", 15: "fifteen", 16: "sixteen",
+    17: "seventeen", 18: "eighteen", 19: "nineteen", 20: "twenty",
+}
+
+# Ways an answer can decline, beyond the plain substrings below.
+REFUSAL_PATTERNS = (
+    re.compile(r"\bno\b[^.]{0,60}\bmetric"),
+    re.compile(r"(?:not|isn't|aren't|does not|doesn't|do not|don't)\s+support"),
+)
+
+REFUSAL_PHRASES = (
+    "not been ingested", "no data", "cannot", "can't", "unable",
+    "nothing to report", "not available", "unknown metric",
+    "not in the ingested",
+    # A policy denial is also a refusal: the governed server can turn a
+    # request down before the tool ever gets a chance to.
+    "denied by policy", "not in the allowed list", "may not call",
+    # Ways a model declines in its own words.
+    "not one of", "does not exist", "doesn't exist", "don't have",
+    "do not have", "isn't available", "is not available", "not supported",
+)
+
 
 def _mentions_number(answer: str, value: Any) -> bool:
     """True if the answer states `value`, allowing light rounding.
 
-    Candidates have to appear as a number in their own right. Matching on a
-    bare substring let a rounded form such as "2" (from 1.5422 at zero
-    decimal places) hit any digit anywhere in the text, so whole-number
-    rounding is not offered and every candidate is anchored.
+    A candidate has to appear as a number in its own right, so a rounded form
+    does not match a digit buried in some other number. Two refinements on
+    top of that:
+
+    * A trailing "." is sentence punctuation unless a digit follows it, so
+      "3.5." states 3.5 while "3.57" still does not.
+    * An integer-valued float is also accepted written as an integer, and a
+      small whole number spelled out as a word, because that is how an answer
+      in prose usually puts it.
     """
     if value is None or isinstance(value, bool):
         return False
 
     text = answer.replace(",", "")
     candidates = {str(value)}
+    whole: int | None = value if isinstance(value, int) else None
+
     if isinstance(value, float):
         candidates |= {f"{value:.{places}f}" for places in (1, 2, 3, 4)}
         if 0 < value < 1:
             # A ratio is often reported as a percentage.
             candidates |= {f"{value * 100:.{places}f}" for places in (1, 2)}
+        if value.is_integer():
+            whole = int(value)
+            candidates.add(str(whole))
 
-    return any(
-        re.search(rf"(?<![\d.]){re.escape(candidate)}(?![\d.])", text)
-        for candidate in candidates
-    )
+    for candidate in candidates:
+        if re.search(rf"(?<![\d.]){re.escape(candidate)}(?!\d)(?!\.\d)", text):
+            return True
+
+    if whole is not None and whole in NUMBER_WORDS:
+        if re.search(rf"\b{NUMBER_WORDS[whole]}\b", text, re.IGNORECASE):
+            return True
+    return False
 
 
 def score_real_answer(question: dict, answer: str, expected: dict[str, Any]) -> list[str]:
@@ -79,16 +118,8 @@ def score_real_answer(question: dict, answer: str, expected: dict[str, Any]) -> 
     lowered = answer.lower()
 
     if want.get("refused"):
-        refusing = any(
-            phrase in lowered
-            for phrase in ("not been ingested", "no data", "cannot", "can't", "unable",
-                           "nothing to report", "not available", "unknown metric",
-                           "not in the ingested",
-                           # A policy denial is also a refusal: the governed
-                           # server can turn a request down before the tool
-                           # ever gets a chance to.
-                           "denied by policy", "not in the allowed list",
-                           "may not call")
+        refusing = any(phrase in lowered for phrase in REFUSAL_PHRASES) or any(
+            pattern.search(lowered) for pattern in REFUSAL_PATTERNS
         )
         if not refusing:
             failures.append("expected the answer to refuse, it did not")

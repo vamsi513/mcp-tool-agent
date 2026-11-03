@@ -5,6 +5,9 @@
 # names a value that tests/independent_metrics.py computes from the recorded
 # fixture in plain Python, with no SQL. If a query is wrong, the eval fails.
 #
+# No ingest is needed first: the runner builds a temporary database from the
+# recorded fixture and removes it afterwards.
+#
 # Run the deterministic form (no model, no network):
 #     python -m pytest tests/test_delivery_eval.py -q
 #     python evals/run_delivery_eval.py

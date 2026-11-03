@@ -16,6 +16,9 @@ import argparse
 import json
 import os
 import sys
+import tempfile
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
@@ -102,6 +105,78 @@ def prune(key: str, body: Any) -> Any:
     return body
 
 
+
+def fixture_metadata(name: str) -> dict[str, Any]:
+    """The repository and page sizes a fixture was recorded with."""
+    path = fixture_path(name)
+    if not path.is_file():
+        raise FileNotFoundError(
+            f"fixture {path} is missing; record it with "
+            f"`python delivery_fixtures.py <owner/name>`"
+        )
+    document = json.loads(path.read_text())
+    parameters = document.get("request_parameters") or {}
+    return {
+        "repo": document["repo"],
+        "max_prs": int(parameters.get("max_prs", 12)),
+        "max_runs": int(parameters.get("max_runs", 50)),
+    }
+
+
+@contextmanager
+def replaying(name: str) -> Iterator[httpx.MockTransport]:
+    """Point delivery_ingest at a recorded file for the duration of the block."""
+    import delivery_ingest
+
+    transport = mock_transport(name)
+    real_client = httpx.Client
+
+    def factory(*args: Any, **kwargs: Any) -> httpx.Client:
+        kwargs["transport"] = transport
+        return real_client(*args, **kwargs)
+
+    delivery_ingest.httpx.Client = factory  # type: ignore[misc,assignment]
+    try:
+        yield transport
+    finally:
+        delivery_ingest.httpx.Client = real_client  # type: ignore[misc]
+
+
+@contextmanager
+def ingested_database(
+    name: str = "github_delivery", db: str | os.PathLike[str] | None = None
+) -> Iterator[Path]:
+    """Yield a database holding the recorded repository, already ingested.
+
+    With no `db`, a database is created in a temporary directory and removed
+    on exit, so nothing outside that directory is touched. This is the single
+    path used by both the test fixtures and the evaluation runner, so the two
+    cannot drift apart.
+    """
+    import delivery_ingest
+
+    metadata = fixture_metadata(name)
+    holder: tempfile.TemporaryDirectory[str] | None = None
+    if db is None:
+        holder = tempfile.TemporaryDirectory(prefix="delivery-eval-")
+        target = Path(holder.name) / "delivery.db"
+    else:
+        target = Path(db)
+
+    try:
+        with replaying(name):
+            delivery_ingest.ingest(
+                metadata["repo"],
+                max_prs=metadata["max_prs"],
+                max_runs=metadata["max_runs"],
+                db=target,
+            )
+        yield target
+    finally:
+        if holder is not None:
+            holder.cleanup()
+
+
 class _RecordingTransport(httpx.HTTPTransport):
     """Passes requests through to GitHub and keeps a copy of each response."""
 
@@ -162,6 +237,9 @@ def record(
         "repo": repo,
         "recorded_from": "https://api.github.com",
         "pruned_to_fields_read_by_ingest": prune_bodies,
+        # Replaying has to request the same page sizes, or the request keys
+        # will not match what was recorded.
+        "request_parameters": {"max_prs": max_prs, "max_runs": max_runs},
         "request_count": len(sink),
         "summary": summary,
         "responses": sink,

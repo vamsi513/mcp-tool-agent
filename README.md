@@ -548,8 +548,33 @@ back to its inputs after the fact.
 
 ## Running it
 
-Ingest one repository. It is read-only and works without a token; set
-`GITHUB_TOKEN` to raise the rate limit.
+### The evaluation needs no ingest
+
+The eval is self-contained. It builds a temporary database from the recorded
+fixture in `tests/fixtures`, through the same ingest code path the tests use,
+and deletes it on exit. It does not read or write the default database, and it
+reaches no network.
+
+```bash
+python evals/run_delivery_eval.py            # the 20 questions, no model, no network
+python -m pytest tests/test_delivery_eval.py -q
+```
+
+To score against a database you already ingested instead:
+
+```bash
+python evals/run_delivery_eval.py --db ./governance.db
+```
+
+That prints a warning, because the expected answers come from the recorded
+fixture: against live data the questions will be reported as failures even
+when the metrics are correct.
+
+### Ingesting live data
+
+Ingest is for querying a repository yourself, through the tools, the agent or
+the GraphQL endpoint. It is not a prerequisite for the eval. It is read-only
+and works without a token; set `GITHUB_TOKEN` to raise the rate limit.
 
 ```bash
 # Optional, never printed or stored:
@@ -563,13 +588,6 @@ Re-running is safe: rows are written with an UPSERT keyed on the GitHub id, so
 a second pass updates in place. If the rate limit is hit the run stops with two
 requests to spare, keeps what it fetched, marks the repository incomplete, and
 the next run continues.
-
-Query the metrics:
-
-```bash
-python evals/run_delivery_eval.py            # the 20 questions, no model, no network
-python -m pytest tests/test_delivery_eval.py -q
-```
 
 Serve the read-only GraphQL endpoint:
 
@@ -591,11 +609,18 @@ python delivery_fixtures.py psf/cachecontrol --max-prs 12 --max-runs 50
 ```
 
 Run the questions through a real model (needs `OPENAI_API_KEY`; the agent
-reaches the tools through the governed server, so the policy applies):
+reaches the tools through the governed server, so the policy applies). This
+also builds its own temporary database from the fixture, so no ingest is
+needed first:
 
 ```bash
 python evals/run_delivery_eval.py --mode real --model gpt-4o-mini --user bob
 ```
+
+Note that the policy applies in this mode: `bob` may only query owners on the
+reader allowlist, so a question about a repository outside it is denied by the
+policy before the tool is reached. That is still a refusal, and the scorer
+counts it as one.
 
 ## Citations and refusals
 

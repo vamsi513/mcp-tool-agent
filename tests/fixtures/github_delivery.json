@@ -3,6 +3,10 @@
  "recorded_from": "https://api.github.com",
  "repo": "psf/cachecontrol",
  "request_count": 14,
+ "request_parameters": {
+  "max_prs": 12,
+  "max_runs": 50
+ },
  "responses": {
   "GET /repos/psf/cachecontrol/actions/runs?per_page=50": {
    "headers": {

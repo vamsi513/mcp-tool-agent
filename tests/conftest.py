@@ -5,7 +5,6 @@ import pytest
 
 import connector_github
 import delivery_fixtures
-import delivery_ingest
 import seed_books
 import server
 
@@ -78,30 +77,28 @@ def mock_github(monkeypatch):
     return install
 
 
-FIXTURE_REPO = "psf/cachecontrol"
 FIXTURE_NAME = "github_delivery"
-FIXTURE_MAX_PRS = 12
-FIXTURE_MAX_RUNS = 50
+# One source of truth: the page sizes come from the fixture that was recorded.
+_FIXTURE_META = delivery_fixtures.fixture_metadata(FIXTURE_NAME)
+FIXTURE_REPO = _FIXTURE_META["repo"]
+FIXTURE_MAX_PRS = _FIXTURE_META["max_prs"]
+FIXTURE_MAX_RUNS = _FIXTURE_META["max_runs"]
 
 
 @pytest.fixture
-def delivery_api(monkeypatch):
+def delivery_api():
     """Point delivery_ingest at the recorded GitHub responses, not the network."""
-    transport = delivery_fixtures.mock_transport(FIXTURE_NAME)
-    real_client = httpx.Client
-
-    def factory(*args, **kwargs):
-        kwargs["transport"] = transport
-        return real_client(*args, **kwargs)
-
-    monkeypatch.setattr(delivery_ingest.httpx, "Client", factory)
-    return transport
+    with delivery_fixtures.replaying(FIXTURE_NAME) as transport:
+        yield transport
 
 
 @pytest.fixture
-def delivery_db(governance_db, delivery_api):
-    """A database with the recorded repository already ingested."""
-    delivery_ingest.ingest(
-        FIXTURE_REPO, max_prs=FIXTURE_MAX_PRS, max_runs=FIXTURE_MAX_RUNS, db=governance_db
-    )
-    return governance_db
+def delivery_db(governance_db):
+    """A database with the recorded repository already ingested.
+
+    Built through delivery_fixtures.ingested_database, which is the same
+    helper evals/run_delivery_eval.py uses, so the runner and the tests
+    cannot drift apart.
+    """
+    with delivery_fixtures.ingested_database(FIXTURE_NAME, db=governance_db) as path:
+        yield path

@@ -18,6 +18,7 @@ from contextlib import closing
 from datetime import UTC, datetime
 from typing import Any
 
+import delivery_ingest
 from store import connect
 
 PR_METRICS = ("pr_cycle_time", "time_to_first_review", "review_count", "merge_frequency")
@@ -80,6 +81,13 @@ class MetricError(Exception):
 
 
 def init(db: str | os.PathLike[str] | None = None) -> None:
+    """Create the metric tables, and the ingest tables they read.
+
+    Without this, querying a database that was never ingested raised
+    OperationalError on a missing dm_repos instead of reporting that the
+    repository is not there.
+    """
+    delivery_ingest.init(db)
     with closing(connect(db)) as conn, conn:
         conn.executescript(_SCHEMA)
 

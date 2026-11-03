@@ -157,3 +157,39 @@ def test_a_refusal_that_quotes_a_figure_is_flagged(delivery_db):
     answer = "I cannot compute velocity, but the cycle time median is 1.5422 hours."
     failures = runner.score_real_answer(REFUSAL_QUESTION, answer, _expected())
     assert any("cycle_time_median" in failure for failure in failures)
+
+
+# --- re-scoring saved answers -----------------------------------------
+
+
+SAVED_RUN = REPO_ROOT / "evals" / "results" / "delivery-real-run2-before-fixes.json"
+
+
+@pytest.mark.skipif(not SAVED_RUN.is_file(), reason="saved run not present")
+def test_rescoring_the_saved_run_needs_no_database_or_network():
+    """Re-scoring only replays stored answers through the current rules."""
+    results = runner.rescore(str(SAVED_RUN))
+
+    assert len(results) == 20
+    assert all("was_passing" in row for row in results)
+
+    as_recorded = sum(1 for row in results if row["was_passing"])
+    rescored = sum(1 for row in results if row["passed"])
+    assert as_recorded == 13
+
+    # The scorer fixes changed no question outcome on this run: every failure
+    # had at least one cause the rules were right to flag.
+    assert rescored == as_recorded
+    assert [row["id"] for row in results if row["was_passing"] != row["passed"]] == []
+
+
+@pytest.mark.skipif(not SAVED_RUN.is_file(), reason="saved run not present")
+def test_rescoring_resolves_only_the_trailing_period_failure():
+    results = {row["id"]: row for row in runner.rescore(str(SAVED_RUN))}
+
+    q12 = results["q12-merge-frequency"]
+    resolved = set(q12["previous_failures"]) - set(q12["failures"])
+    assert resolved == {"answer does not state the expected value"}
+    # It still fails, because the answer never states the total.
+    assert not q12["passed"]
+    assert q12["failures"] == ["answer does not state the expected total_merges"]

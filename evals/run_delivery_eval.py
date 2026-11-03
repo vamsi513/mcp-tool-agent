@@ -330,6 +330,76 @@ def print_trace(results: list[dict], mode: str, width: int = 1200) -> None:
             print(f"  failure     : {failure}")
 
 
+def rescore(path: str) -> list[dict]:
+    """Re-score answers saved by an earlier run, with the current scorer.
+
+    Isolates the scorer's effect: the answers are fixed, so any change in the
+    outcome comes from the rules alone. Each saved row is matched to its
+    question by id, so the expectations are the current ones.
+    """
+    document = json.loads(Path(path).read_text())
+    saved = document.get("results") or []
+    _, questions = load_questions()
+    by_id = {question["id"]: question for question in questions}
+    expected = expectations()
+
+    rescored = []
+    for row in saved:
+        question = by_id.get(row["id"])
+        if question is None:
+            rescored.append(
+                {
+                    "id": row["id"],
+                    "question": row.get("question", ""),
+                    "tool": row.get("tool", ""),
+                    "passed": False,
+                    "failures": ["no question with this id in the current file"],
+                    "was_passing": bool(row.get("passed")),
+                    "previous_failures": row.get("failures") or [],
+                    "answer": row.get("answer", ""),
+                }
+            )
+            continue
+        failures = score_real_answer(question, row.get("answer", ""), expected)
+        rescored.append(
+            {
+                "id": row["id"],
+                "question": question["question"],
+                "tool": question["tool"],
+                "passed": not failures,
+                "failures": failures,
+                "was_passing": bool(row.get("passed")),
+                "previous_failures": row.get("failures") or [],
+                "answer": row.get("answer", ""),
+            }
+        )
+    return rescored
+
+
+def report_rescore(results: list[dict], path: str) -> None:
+    width = max(len(row["id"]) for row in results)
+    before = sum(1 for row in results if row["was_passing"])
+    after = sum(1 for row in results if row["passed"])
+
+    print(f"re-scored {path}")
+    print(f"saved answers: {len(results)}")
+    print()
+    for row in results:
+        was = "pass" if row["was_passing"] else "FAIL"
+        now = "pass" if row["passed"] else "FAIL"
+        moved = "  <- changed" if was != now else ""
+        print(f"{was} -> {now}  {row['id'].ljust(width)}{moved}")
+        for failure in row["previous_failures"]:
+            print(f"      was : {failure}")
+        for failure in row["failures"]:
+            print(f"      now : {failure}")
+    print()
+    print(f"as recorded          : {before}/{len(results)}")
+    print(f"re-scored             : {after}/{len(results)}")
+    changed = [row["id"] for row in results if row["was_passing"] != row["passed"]]
+    print(f"questions that changed: {changed if changed else 'none'}")
+
+
 def report(results: list[dict], mode: str) -> None:
     width = max(len(r["id"]) for r in results)
     print(f"mode={mode}  questions={len(results)}")
@@ -360,12 +430,38 @@ def main(argv: list[str] | None = None) -> int:
              "behind every question",
     )
     parser.add_argument(
+        "--rescore",
+        default=None,
+        metavar="FILE",
+        help="re-score answers saved by an earlier run with the current "
+             "scorer, instead of running anything",
+    )
+    parser.add_argument(
         "--db",
         default=None,
         help="use this existing database instead of building one from the "
              "recorded fixture; expected values will not match live data",
     )
     args = parser.parse_args(argv)
+
+    if args.rescore:
+        rescored = rescore(args.rescore)
+        if args.json:
+            json.dump(
+                {
+                    "rescored_from": args.rescore,
+                    "as_recorded": sum(1 for r in rescored if r["was_passing"]),
+                    "rescored": sum(1 for r in rescored if r["passed"]),
+                    "total": len(rescored),
+                    "results": rescored,
+                },
+                sys.stdout,
+                indent=2,
+            )
+            sys.stdout.write("\n")
+        else:
+            report_rescore(rescored, args.rescore)
+        return 0
 
     if args.mode == "real" and not os.getenv("OPENAI_API_KEY"):
         print("OPENAI_API_KEY is not set; --mode real needs it", file=sys.stderr)

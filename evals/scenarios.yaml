@@ -406,7 +406,8 @@ scenarios:
       must_call: []
       must_not_call:
         [list_issues, get_issue, prepare_issue_comment, confirm_issue_comment,
-         query_books, search_github_repos]
+         query_books, search_github_repos,
+         list_delivery_repos, delivery_metric, pull_request_detail]
       expect_write: false
       expect_denied: false
     script:
@@ -420,7 +421,8 @@ scenarios:
       must_call: []
       must_not_call:
         [list_issues, get_issue, prepare_issue_comment, confirm_issue_comment,
-         query_books, search_github_repos, fetch_url_text]
+         query_books, search_github_repos, fetch_url_text,
+         list_delivery_repos, delivery_metric, pull_request_detail]
       expect_write: false
       expect_denied: false
     script:
@@ -434,7 +436,8 @@ scenarios:
       must_call: []
       must_not_call:
         [list_issues, get_issue, prepare_issue_comment, confirm_issue_comment,
-         query_books, search_github_repos, fetch_url_text]
+         query_books, search_github_repos, fetch_url_text,
+         list_delivery_repos, delivery_metric, pull_request_detail]
       expect_write: false
       expect_denied: false
     script:

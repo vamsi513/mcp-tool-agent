@@ -165,7 +165,10 @@ SELECT run_id AS id,
 
 _MERGE_FREQUENCY_SQL = """
 SELECT number AS id,
-       date(merged_at, 'weekday 1', '-7 days') AS bucket
+       -- Monday of the merge week. strftime('%w') is 0=Sunday..6=Saturday, so
+       -- (%w + 6) % 7 is the number of days back to Monday, and is 0 when the
+       -- merge itself landed on a Monday.
+       date(merged_at, '-' || ((strftime('%w', merged_at) + 6) % 7) || ' days') AS bucket
   FROM dm_pull_requests
  WHERE repo = ?
    AND merged_at IS NOT NULL

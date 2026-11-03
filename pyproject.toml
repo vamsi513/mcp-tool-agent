@@ -12,6 +12,7 @@ dependencies = [
     "beautifulsoup4==4.15.0",
     "python-dotenv==1.2.3",
     "PyYAML==6.0.3",
+    "graphql-core==3.2.6",
 ]
 
 [project.scripts]
@@ -22,7 +23,15 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-py-modules = ["agent", "server", "seed_books"]
+py-modules = [
+    "agent",
+    "server",
+    "seed_books",
+    "delivery_ingest",
+    "delivery_metrics",
+    "delivery_tools",
+    "delivery_graphql",
+]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
@@ -54,4 +63,9 @@ source = [
     "metering",
     "policy",
     "store",
+    "delivery_ingest",
+    "delivery_metrics",
+    "delivery_tools",
+    "delivery_graphql",
+    "delivery_fixtures",
 ]

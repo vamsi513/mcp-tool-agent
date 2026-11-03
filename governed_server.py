@@ -32,6 +32,7 @@ from mcp.server.fastmcp import FastMCP
 
 import audit
 import connector_github
+import delivery_tools
 import server
 from policy import Policy, PolicyError, load_policy
 
@@ -44,6 +45,9 @@ TOOL_REGISTRY: dict[str, Callable[..., Any]] = {
     "get_issue": connector_github.get_issue,
     "prepare_issue_comment": connector_github.prepare_issue_comment,
     "confirm_issue_comment": connector_github.confirm_issue_comment,
+    "list_delivery_repos": delivery_tools.list_delivery_repos,
+    "delivery_metric": delivery_tools.delivery_metric,
+    "pull_request_detail": delivery_tools.pull_request_detail,
 }
 
 

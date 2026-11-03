@@ -105,3 +105,45 @@ def test_every_tool_is_registered_on_the_governed_server():
 
     for tool in dt.TOOLS:
         assert tool.__name__ in governed_server.TOOL_REGISTRY
+
+
+# --- summary string and trimmed payload --------------------------------
+
+
+def test_every_metric_answer_carries_a_summary_with_the_sample_size(delivery_db):
+    import delivery_metrics
+
+    for metric in delivery_metrics.METRICS:
+        result = dt.delivery_metric(FIXTURE_REPO, metric)
+        summary = result["summary"]
+        assert summary and isinstance(summary, str)
+        assert str(result["value"]) in summary, (metric, summary)
+        if metric == "workflow_failure_rate":
+            assert str(result["completed_runs"]) in summary
+        elif metric == "merge_frequency":
+            assert str(result["total_merges"]) in summary
+        else:
+            assert str(result["sample_size"]) in summary, (metric, summary)
+
+
+def test_per_pull_request_is_not_sent_to_the_model(delivery_db):
+    """It invited recomputing a statistic instead of quoting the one given."""
+    result = dt.delivery_metric(FIXTURE_REPO, "review_count")
+
+    assert "per_pull_request" not in result
+    # The citations still name every row the metric used.
+    assert result["citations"]["pull_requests"] == sorted(im.review_counts())
+
+
+def test_metrics_layer_still_exposes_the_per_row_values(delivery_db):
+    """Only the tool payload is trimmed; the metric itself is unchanged."""
+    import delivery_metrics
+
+    raw = delivery_metrics.compute(FIXTURE_REPO, "review_count", db=delivery_db)
+    assert len(raw["per_pull_request"]) == raw["sample_size"]
+
+
+def test_refusals_carry_no_summary(delivery_db):
+    result = dt.delivery_metric("nobody/nothing", "pr_cycle_time")
+    assert result["refused"] is True
+    assert "summary" not in result

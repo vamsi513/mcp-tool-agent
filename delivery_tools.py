@@ -30,9 +30,44 @@ from store import connect
 
 MAX_CITED = 50
 
+# Keys that are detail the model does not need in order to answer. Dropping
+# per_pull_request in particular stops the model recomputing a statistic from
+# the row values instead of quoting the one the metric already computed.
+DROPPED_FROM_PAYLOAD = ("per_pull_request",)
+
 
 def _refusal(reason: str, **extra: Any) -> dict:
     return {"refused": True, "reason": reason, **extra}
+
+
+def _summarise(result: dict) -> str:
+    """One sentence stating the figure, its unit and the sample it came from.
+
+    Pre-rendered so an answer can quote it rather than deriving a number of
+    its own from the underlying rows.
+    """
+    metric = result["metric"]
+    unit = result["unit"]
+    size = result["sample_size"]
+
+    if metric == "workflow_failure_rate":
+        return (
+            f"{result['failures']} of {result['completed_runs']} completed "
+            f"workflow runs failed, a failure rate of {result['value']}"
+        )
+    if metric == "merge_frequency":
+        weeks = len(result.get("weeks") or [])
+        return (
+            f"{result['total_merges']} pull requests were merged across "
+            f"{weeks} week(s), {result['value']} {unit}"
+        )
+
+    statistic = result.get("statistic", "value")
+    rows = "pull request" if size == 1 else "pull requests"
+    return (
+        f"the {statistic} {metric} is {result['value']} {unit}, "
+        f"over a sample of {size} {rows}"
+    )
 
 
 def _cite(sources: dict[str, list[int]]) -> dict[str, Any]:
@@ -76,10 +111,12 @@ def delivery_metric(
     workflow_failure_rate, merge_frequency. `since` and `until` are optional
     YYYY-MM-DD bounds on the event each metric is keyed to.
 
-    The result states the metric's definition, its unit, the sample size, and
-    the pull request numbers or workflow run ids it came from. Always quote
-    those identifiers when reporting the number. If the result has
-    `refused: true`, say so and do not supply a figure of your own.
+    The result carries a `summary` sentence stating the figure, its unit and
+    the sample size: report that figure as given rather than deriving one of
+    your own. It also states the metric's definition and the pull request
+    numbers or workflow run ids it came from; always quote those identifiers
+    when reporting the number. If the result has `refused: true`, say so and
+    do not supply a figure of your own.
     """
     if metric not in METRICS:
         return _refusal(
@@ -110,9 +147,12 @@ def delivery_metric(
             value=None,
         )
 
+    result["summary"] = _summarise(result)
     result["citations"] = _cite(result["sources"])
     result["refused"] = False
     result.pop("sources", None)
+    for key in DROPPED_FROM_PAYLOAD:
+        result.pop(key, None)
     return result
 
 

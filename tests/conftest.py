@@ -31,13 +31,13 @@ def mock_http(monkeypatch):
     """Replace httpx.Client inside server with one backed by a caller-supplied handler."""
 
     def install(handler):
-        real_client = httpx.Client
-
-        def factory(*args, **kwargs):
+        def factory(**kwargs):
             kwargs["transport"] = httpx.MockTransport(handler)
-            return real_client(*args, **kwargs)
+            return httpx.Client(**kwargs)
 
-        monkeypatch.setattr(server.httpx, "Client", factory)
+        # Patches the module's own factory. Assigning to server.httpx.Client
+        # would rebind httpx.Client for the whole process.
+        monkeypatch.setattr(server, "http_client", factory)
 
     return install
 
@@ -60,17 +60,16 @@ def mock_github(monkeypatch):
     calls: list[tuple[str, str]] = []
 
     def install(handler):
-        real_client = httpx.Client
-
         def recording(request: httpx.Request) -> httpx.Response:
             calls.append((request.method, request.url.path))
             return handler(request)
 
-        def factory(*args, **kwargs):
+        def factory(**kwargs):
             kwargs["transport"] = httpx.MockTransport(recording)
-            return real_client(*args, **kwargs)
+            return httpx.Client(**kwargs)
 
-        monkeypatch.setattr(connector_github.httpx, "Client", factory)
+        # As above: the module's factory, never the global class.
+        monkeypatch.setattr(connector_github, "http_client", factory)
         return calls
 
     install.calls = calls  # type: ignore[attr-defined]

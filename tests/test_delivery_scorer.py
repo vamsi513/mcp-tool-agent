@@ -193,3 +193,33 @@ def test_rescoring_resolves_only_the_trailing_period_failure():
     # It still fails, because the answer never states the total.
     assert not q12["passed"]
     assert q12["failures"] == ["answer does not state the expected total_merges"]
+
+
+# --- the fixtures must not rebind the global httpx.Client -------------
+
+
+@pytest.mark.parametrize("module_name", ["server", "connector_github", "delivery_ingest"])
+def test_modules_create_clients_through_their_own_factory(module_name):
+    """Each module owns an http_client that tests can swap safely."""
+    import importlib
+
+    module = importlib.import_module(module_name)
+    assert callable(module.http_client)
+
+
+def test_mock_http_leaves_the_global_client_alone(mock_http):
+    import httpx
+
+    before = httpx.Client
+    mock_http(lambda request: httpx.Response(200, json=[]))
+    assert httpx.Client is before
+    assert isinstance(httpx.Client, type)
+
+
+def test_mock_github_leaves_the_global_client_alone(mock_github):
+    import httpx
+
+    before = httpx.Client
+    mock_github(lambda request: httpx.Response(200, json=[]))
+    assert httpx.Client is before
+    assert isinstance(httpx.Client, type)

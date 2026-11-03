@@ -46,7 +46,14 @@ questions:
       mean: cycle_time_mean
 
   - id: q04-how-many-merged
-    question: How many merged pull requests is the cycle time based on?
+    # Originally "How many merged pull requests is the cycle time based on?",
+    # which named no repository. Each question is answered in a fresh
+    # conversation, so there was nothing for the model to resolve it against
+    # and it guessed one the policy then denied. That was a defect in the
+    # question, not in the model or the tools.
+    question: >-
+      How many merged pull requests is the cycle time for psf/cachecontrol
+      based on?
     tool: delivery_metric
     arguments: {repo: psf/cachecontrol, metric: pr_cycle_time}
     expect:

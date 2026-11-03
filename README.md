@@ -682,6 +682,16 @@ All twenty pass. Each expected number is computed in
 `statistics`; that module does not import `delivery_metrics`, and a test
 asserts as much on the import graph, so the SQL cannot agree with itself.
 
+One question was revised after a real-model run. **q04** originally read
+*"How many merged pull requests is the cycle time based on?"* — an ambiguous
+question, original failure documented: it named no repository, and because
+each question is answered in a fresh conversation there was nothing for the
+model to resolve it against. It guessed a repository the policy then denied,
+and the run recorded a refusal where a number was expected. The question now
+names `psf/cachecontrol`. The original wording and the failure it caused are
+kept here on purpose; the fix was to the question, not to the model or the
+tools.
+
 Test counts, measured on this branch's base and tip:
 
 ```

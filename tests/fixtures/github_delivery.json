@@ -1,0 +1,785 @@
+{
+ "pruned_to_fields_read_by_ingest": true,
+ "recorded_from": "https://api.github.com",
+ "repo": "psf/cachecontrol",
+ "request_count": 14,
+ "responses": {
+  "GET /repos/psf/cachecontrol/actions/runs?per_page=50": {
+   "headers": {
+    "link": "<https://api.github.com/repositories/10754954/actions/runs?per_page=50&page=2>; rel=\"next\", <https://api.github.com/repositories/10754954/actions/runs?per_page=50&page=16>; rel=\"last\"",
+    "x-ratelimit-remaining": "42",
+    "x-ratelimit-reset": "1793750151"
+   },
+   "json": {
+    "total_count": 772,
+    "workflow_runs": [
+     {
+      "conclusion": "failure",
+      "created_at": "2026-11-03T19:15:12Z",
+      "event": "pull_request",
+      "head_branch": "fix-callback-failure-cleanup",
+      "id": 41701515747,
+      "name": "CI",
+      "status": "completed"
+     },
+     {
+      "conclusion": "failure",
+      "created_at": "2026-11-03T19:15:12Z",
+      "event": "pull_request",
+      "head_branch": "fix-callback-failure-cleanup",
+      "id": 41701515744,
+      "name": "GitHub Actions Security Analysis with zizmor \ud83c\udf08",
+      "status": "completed"
+     },
+     {
+      "conclusion": "success",
+      "created_at": "2026-11-03T16:52:10Z",
+      "event": "dynamic",
+      "head_branch": "master",
+      "id": 41678556619,
+      "name": "github_actions in /. - Update #1678185598",
+      "status": "completed"
+     },
+     {
+      "conclusion": "failure",
+      "created_at": "2026-11-03T13:29:28Z",
+      "event": "pull_request",
+      "head_branch": "fix-preserve-revalidated-status",
+      "id": 41644776727,
+      "name": "GitHub Actions Security Analysis with zizmor \ud83c\udf08",
+      "status": "completed"
+     },
+     {
+      "conclusion": "failure",
+      "created_at": "2026-11-03T13:29:28Z",
+      "event": "pull_request",
+      "head_branch": "fix-preserve-revalidated-status",
+      "id": 41644776724,
+      "name": "CI",
+      "status": "completed"
+     },
+     {
+      "conclusion": "success",
+      "created_at": "2026-11-02T16:52:25Z",
+      "event": "dynamic",
+      "head_branch": "master",
+      "id": 41485692013,
+      "name": "github_actions in /. - Update #1674823970",
+      "status": "completed"
+     },
+     {
+      "conclusion": "failure",
+      "created_at": "2026-10-30T20:56:34Z",
+      "event": "dynamic",
+      "head_branch": "master",
+      "id": 41127168935,
+      "name": "uv in /. for filelock - Update #1666525894",
+      "status": "completed"
+     },
+     {
+      "conclusion": "success",
+      "created_at": "2026-10-30T20:28:19Z",
+      "event": "dynamic",
+      "head_branch": "master",
+      "id": 41123463316,
+      "name": "Graph Update: uv in /. #1666479452",
+      "status": "completed"
+     },
+     {
+      "conclusion": "success",
+      "created_at": "2026-10-30T20:28:16Z",
+      "event": "push",
+      "head_branch": "master",
+      "id": 41123456965,
+      "name": "CI",
+      "status": "completed"
+     },
+     {
+      "conclusion": "success",
+      "created_at": "2026-10-30T18:12:34Z",
+      "event": "pull_request",
+      "head_branch": "dependabot/uv/msgpack-1.2.3",
+      "id": 41104902461,
+      "name": "GitHub Actions Security Analysis with zizmor \ud83c\udf08",
+      "status": "completed"
+     },
+     {
+      "conclusion": "success",
+      "created_at": "2026-10-30T18:12:34Z",
+      "event": "pull_request",
+      "head_branch": "dependabot/uv/msgpack-1.2.3",
+      "id": 41104902384,
+      "name": "CI",
+      "status": "completed"
+     },
+     {
+      "conclusion": "success",
+      "created_at": "2026-10-30T18:11:24Z",
+      "event": "dynamic",
+      "head_branch": "master",
+      "id": 41104721432,
+      "name": "uv in /. for msgpack - Update #1666248972",
+      "status": "completed"
+     },
+     {
+      "conclusion": "failure",
+      "created_at": "2026-10-30T18:11:24Z",
+      "event": "dynamic",
+      "head_branch": "master",
+      "id": 41104721320,
+      "name": "uv in /. for filelock - Update #1666248973",
+      "status": "completed"
+     },
+     {
+      "conclusion": "success",
+      "created_at": "2026-10-30T18:11:13Z",
+      "event": "push",
+      "head_branch": "master",
+      "id": 41104695367,
+      "name": "CI",
+      "status": "completed"
+     },
+     {
+      "conclusion": "success",
+      "created_at": "2026-10-30T16:53:08Z",
+      "event": "pull_request",
+      "head_branch": "dependabot/github_actions/actions-670bd10df1",
+      "id": 41093898420,
+      "name": "CI",
+      "status": "completed"
+     },
+     {
+      "conclusion": "success",
+      "created_at": "2026-10-30T16:53:08Z",
+      "event": "pull_request",
+      "head_branch": "dependabot/github_actions/actions-670bd10df1",
+      "id": 41093898328,
+      "name": "GitHub Actions Security Analysis with zizmor \ud83c\udf08",
+      "status": "completed"
+     },
+     {
+      "conclusion": "success",
+      "created_at": "2026-10-30T16:52:11Z",
+      "event": "dynamic",
+      "head_branch": "master",
+      "id": 41093761221,
+      "name": "github_actions in / for astral-sh/setup-uv, pypa/gh-action-pypi-publish - Update #1666124762",
+      "status": "completed"
+     },
+     {
+      "conclusion": "success",
+      "created_at": "2026-10-30T16:52:09Z",
+      "event": "dynamic",
+      "head_branch": "master",
+      "id": 41093755139,
+      "name": "github_actions in /. - Update #1666124690",
+      "status": "completed"
+     },
+     {
+      "conclusion": "success",
+      "created_at": "2026-10-29T16:52:10Z",
+      "event": "dynamic",
+      "head_branch": "master",
+      "id": 40915777735,
+      "name": "github_actions in / for astral-sh/setup-uv, pypa/gh-action-pypi-publish - Update #1663590309",
+      "status": "completed"
+     },
+     {
+      "conclusion": "success",
+      "created_at": "2026-10-29T16:52:09Z",
+      "event": "dynamic",
+      "head_branch": "master",
+      "id": 40915774638,
+      "name": "github_actions in /. - Update #1663590225",
+      "status": "completed"
+     },
+     {
+      "conclusion": "success",
+      "created_at": "2026-10-28T16:53:17Z",
+      "event": "pull_request",
+      "head_branch": "dependabot/github_actions/actions-e7bdc2f13e",
+      "id": 40730362317,
+      "name": "CI",
+      "status": "completed"
+     },
+     {
+      "conclusion": "success",
+      "created_at": "2026-10-28T16:53:17Z",
+      "event": "pull_request",
+      "head_branch": "dependabot/github_actions/actions-e7bdc2f13e",
+      "id": 40730362266,
+      "name": "GitHub Actions Security Analysis with zizmor \ud83c\udf08",
+      "status": "completed"
+     },
+     {
+      "conclusion": "success",
+      "created_at": "2026-10-28T16:52:13Z",
+      "event": "dynamic",
+      "head_branch": "master",
+      "id": 40730194949,
+      "name": "github_actions in / for pypa/gh-action-pypi-publish - Update #1661018764",
+      "status": "completed"
+     },
+     {
+      "conclusion": "success",
+      "created_at": "2026-10-28T16:52:11Z",
+      "event": "dynamic",
+      "head_branch": "master",
+      "id": 40730189578,
+      "name": "github_actions in /. - Update #1661018689",
+      "status": "completed"
+     },
+     {
+      "conclusion": "failure",
+      "created_at": "2026-10-28T00:24:13Z",
+      "event": "pull_request",
+      "head_branch": "fix/quoted-cache-control-numbers",
+      "id": 40608535200,
+      "name": "CI",
+      "status": "completed"
+     },
+     {
+      "conclusion": "failure",
+      "created_at": "2026-10-28T00:24:13Z",
+      "event": "pull_request",
+      "head_branch": "fix/quoted-cache-control-numbers",
+      "id": 40608534910,
+      "name": "GitHub Actions Security Analysis with zizmor \ud83c\udf08",
+      "status": "completed"
+     },
+     {
+      "conclusion": "success",
+      "created_at": "2026-10-27T16:53:12Z",
+      "event": "pull_request",
+      "head_branch": "dependabot/github_actions/actions-9b5c32f757",
+      "id": 40545282582,
+      "name": "CI",
+      "status": "completed"
+     },
+     {
+      "conclusion": "success",
+      "created_at": "2026-10-27T16:53:12Z",
+      "event": "pull_request",
+      "head_branch": "dependabot/github_actions/actions-9b5c32f757",
+      "id": 40545282321,
+      "name": "GitHub Actions Security Analysis with zizmor \ud83c\udf08",
+      "status": "completed"
+     },
+     {
+      "conclusion": "success",
+      "created_at": "2026-10-27T16:52:10Z",
+      "event": "dynamic",
+      "head_branch": "master",
+      "id": 40545120400,
+      "name": "github_actions in /. - Update #1658486193",
+      "status": "completed"
+     },
+     {
+      "conclusion": "success",
+      "created_at": "2026-10-26T16:52:26Z",
+      "event": "dynamic",
+      "head_branch": "master",
+      "id": 40363271587,
+      "name": "github_actions in /. - Update #1655626927",
+      "status": "completed"
+     },
+     {
+      "conclusion": "success",
+      "created_at": "2026-10-25T16:04:15Z",
+      "event": "dynamic",
+      "head_branch": "master",
+      "id": 40209913947,
+      "name": "Graph Update: uv in /. #1651681122",
+      "status": "completed"
+     },
+     {
+      "conclusion": "success",
+      "created_at": "2026-10-25T16:04:11Z",
+      "event": "push",
+      "head_branch": "master",
+      "id": 40209908700,
+      "name": "CI",
+      "status": "completed"
+     },
+     {
+      "conclusion": "success",
+      "created_at": "2026-10-25T15:26:29Z",
+      "event": "pull_request",
+      "head_branch": "dependabot/uv/setuptools-84.1.0",
+      "id": 40206942140,
+      "name": "GitHub Actions Security Analysis with zizmor \ud83c\udf08",
+      "status": "completed"
+     },
+     {
+      "conclusion": "success",
+      "created_at": "2026-10-25T15:26:29Z",
+      "event": "pull_request",
+      "head_branch": "dependabot/uv/setuptools-84.1.0",
+      "id": 40206942120,
+      "name": "CI",
+      "status": "completed"
+     },
+     {
+      "conclusion": "success",
+      "created_at": "2026-10-25T15:25:15Z",
+      "event": "dynamic",
+      "head_branch": "master",
+      "id": 40206845263,
+      "name": "uv in /. for setuptools - Update #1651641524",
+      "status": "completed"
+     },
+     {
+      "conclusion": "success",
+      "created_at": "2026-10-25T15:24:06Z",
+      "event": "dynamic",
+      "head_branch": "master",
+      "id": 40206750972,
+      "name": "Graph Update: uv in /. #1651640714",
+      "status": "completed"
+     },
+     {
+      "conclusion": "success",
+      "created_at": "2026-10-25T15:24:02Z",
+      "event": "push",
+      "head_branch": "master",
+      "id": 40206745735,
+      "name": "CI",
+      "status": "completed"
+     },
+     {
+      "conclusion": "success",
+      "created_at": "2026-10-25T14:47:12Z",
+      "event": "pull_request",
+      "head_branch": "bump-uv",
+      "id": 40203864124,
+      "name": "GitHub Actions Security Analysis with zizmor \ud83c\udf08",
+      "status": "completed"
+     },
+     {
+      "conclusion": "success",
+      "created_at": "2026-10-25T14:47:12Z",
+      "event": "pull_request",
+      "head_branch": "bump-uv",
+      "id": 40203864118,
+      "name": "CI",
+      "status": "completed"
+     },
+     {
+      "conclusion": "success",
+      "created_at": "2026-10-23T20:15:23Z",
+      "event": "dynamic",
+      "head_branch": "master",
+      "id": 40017795446,
+      "name": "Graph Update: uv in /. #1648715036",
+      "status": "completed"
+     },
+     {
+      "conclusion": "success",
+      "created_at": "2026-10-23T20:15:20Z",
+      "event": "push",
+      "head_branch": "master",
+      "id": 40017787687,
+      "name": "CI",
+      "status": "completed"
+     },
+     {
+      "conclusion": "success",
+      "created_at": "2026-10-23T18:42:51Z",
+      "event": "pull_request",
+      "head_branch": "dependabot/uv/certifi-2026.10.19",
+      "id": 40005555032,
+      "name": "CI",
+      "status": "completed"
+     },
+     {
+      "conclusion": "success",
+      "created_at": "2026-10-23T18:42:51Z",
+      "event": "pull_request",
+      "head_branch": "dependabot/uv/certifi-2026.10.19",
+      "id": 40005554941,
+      "name": "GitHub Actions Security Analysis with zizmor \ud83c\udf08",
+      "status": "completed"
+     },
+     {
+      "conclusion": "success",
+      "created_at": "2026-10-23T18:41:40Z",
+      "event": "dynamic",
+      "head_branch": "master",
+      "id": 40005393740,
+      "name": "uv in /. for certifi - Update #1648517926",
+      "status": "completed"
+     },
+     {
+      "conclusion": "success",
+      "created_at": "2026-10-23T17:38:18Z",
+      "event": "push",
+      "head_branch": "master",
+      "id": 39996705700,
+      "name": "CI",
+      "status": "completed"
+     },
+     {
+      "conclusion": "cancelled",
+      "created_at": "2026-10-23T17:37:58Z",
+      "event": "push",
+      "head_branch": "master",
+      "id": 39996660050,
+      "name": "CI",
+      "status": "completed"
+     },
+     {
+      "conclusion": "cancelled",
+      "created_at": "2026-10-23T17:37:30Z",
+      "event": "push",
+      "head_branch": "master",
+      "id": 39996599214,
+      "name": "CI",
+      "status": "completed"
+     },
+     {
+      "conclusion": "success",
+      "created_at": "2026-10-23T16:52:02Z",
+      "event": "dynamic",
+      "head_branch": "master",
+      "id": 39990313654,
+      "name": "github_actions in / for astral-sh/setup-uv, zizmorcore/zizmor-action - Update #1648248108",
+      "status": "completed"
+     },
+     {
+      "conclusion": "success",
+      "created_at": "2026-10-23T16:51:59Z",
+      "event": "dynamic",
+      "head_branch": "master",
+      "id": 39990308776,
+      "name": "github_actions in /. - Update #1648247940",
+      "status": "completed"
+     },
+     {
+      "conclusion": "success",
+      "created_at": "2026-10-22T16:53:08Z",
+      "event": "pull_request",
+      "head_branch": "dependabot/github_actions/actions-c755a4effe",
+      "id": 39817814153,
+      "name": "GitHub Actions Security Analysis with zizmor \ud83c\udf08",
+      "status": "completed"
+     }
+    ]
+   },
+   "status": 200
+  },
+  "GET /repos/psf/cachecontrol/pulls/466/reviews?per_page=100": {
+   "headers": {
+    "x-ratelimit-remaining": "44",
+    "x-ratelimit-reset": "1793750151"
+   },
+   "json": [
+    {
+     "id": 5058803245,
+     "state": "COMMENTED",
+     "submitted_at": "2026-08-29T18:08:01Z",
+     "user": {
+      "login": "woodruffw"
+     }
+    },
+    {
+     "id": 5066200708,
+     "state": "COMMENTED",
+     "submitted_at": "2026-08-31T12:03:53Z",
+     "user": {
+      "login": "ogalland-tob"
+     }
+    },
+    {
+     "id": 5066606456,
+     "state": "COMMENTED",
+     "submitted_at": "2026-08-31T12:44:52Z",
+     "user": {
+      "login": "ogalland-tob"
+     }
+    },
+    {
+     "id": 5181906676,
+     "state": "APPROVED",
+     "submitted_at": "2026-09-11T17:54:06Z",
+     "user": {
+      "login": "woodruffw"
+     }
+    }
+   ],
+   "status": 200
+  },
+  "GET /repos/psf/cachecontrol/pulls/485/reviews?per_page=100": {
+   "headers": {
+    "x-ratelimit-remaining": "43",
+    "x-ratelimit-reset": "1793750151"
+   },
+   "json": [],
+   "status": 200
+  },
+  "GET /repos/psf/cachecontrol/pulls/486/reviews?per_page=100": {
+   "headers": {
+    "x-ratelimit-remaining": "45",
+    "x-ratelimit-reset": "1793750151"
+   },
+   "json": [
+    {
+     "id": 5633924691,
+     "state": "APPROVED",
+     "submitted_at": "2026-10-23T20:15:13Z",
+     "user": {
+      "login": "woodruffw"
+     }
+    }
+   ],
+   "status": 200
+  },
+  "GET /repos/psf/cachecontrol/pulls/487/reviews?per_page=100": {
+   "headers": {
+    "x-ratelimit-remaining": "46",
+    "x-ratelimit-reset": "1793750151"
+   },
+   "json": [
+    {
+     "id": 5643849997,
+     "state": "APPROVED",
+     "submitted_at": "2026-10-25T15:23:53Z",
+     "user": {
+      "login": "woodruffw"
+     }
+    }
+   ],
+   "status": 200
+  },
+  "GET /repos/psf/cachecontrol/pulls/488/reviews?per_page=100": {
+   "headers": {
+    "x-ratelimit-remaining": "47",
+    "x-ratelimit-reset": "1793750151"
+   },
+   "json": [
+    {
+     "id": 5644053848,
+     "state": "APPROVED",
+     "submitted_at": "2026-10-25T16:04:04Z",
+     "user": {
+      "login": "woodruffw"
+     }
+    }
+   ],
+   "status": 200
+  },
+  "GET /repos/psf/cachecontrol/pulls/489/reviews?per_page=100": {
+   "headers": {
+    "x-ratelimit-remaining": "49",
+    "x-ratelimit-reset": "1793750151"
+   },
+   "json": [],
+   "status": 200
+  },
+  "GET /repos/psf/cachecontrol/pulls/490/reviews?per_page=100": {
+   "headers": {
+    "x-ratelimit-remaining": "48",
+    "x-ratelimit-reset": "1793750151"
+   },
+   "json": [],
+   "status": 200
+  },
+  "GET /repos/psf/cachecontrol/pulls/491/reviews?per_page=100": {
+   "headers": {
+    "x-ratelimit-remaining": "50",
+    "x-ratelimit-reset": "1793750151"
+   },
+   "json": [],
+   "status": 200
+  },
+  "GET /repos/psf/cachecontrol/pulls/492/reviews?per_page=100": {
+   "headers": {
+    "x-ratelimit-remaining": "51",
+    "x-ratelimit-reset": "1793750151"
+   },
+   "json": [],
+   "status": 200
+  },
+  "GET /repos/psf/cachecontrol/pulls/493/reviews?per_page=100": {
+   "headers": {
+    "x-ratelimit-remaining": "52",
+    "x-ratelimit-reset": "1793750151"
+   },
+   "json": [
+    {
+     "id": 5718272500,
+     "state": "APPROVED",
+     "submitted_at": "2026-10-30T20:28:09Z",
+     "user": {
+      "login": "woodruffw"
+     }
+    }
+   ],
+   "status": 200
+  },
+  "GET /repos/psf/cachecontrol/pulls/494/reviews?per_page=100": {
+   "headers": {
+    "x-ratelimit-remaining": "53",
+    "x-ratelimit-reset": "1793750151"
+   },
+   "json": [],
+   "status": 200
+  },
+  "GET /repos/psf/cachecontrol/pulls/495/reviews?per_page=100": {
+   "headers": {
+    "x-ratelimit-remaining": "54",
+    "x-ratelimit-reset": "1793750151"
+   },
+   "json": [],
+   "status": 200
+  },
+  "GET /repos/psf/cachecontrol/pulls?direction=desc&per_page=12&sort=updated&state=all": {
+   "headers": {
+    "link": "<https://api.github.com/repositories/10754954/pulls?state=all&sort=updated&direction=desc&per_page=12&page=2>; rel=\"next\", <https://api.github.com/repositories/10754954/pulls?state=all&sort=updated&direction=desc&per_page=12&page=28>; rel=\"last\"",
+    "x-ratelimit-remaining": "55",
+    "x-ratelimit-reset": "1793750151"
+   },
+   "json": [
+    {
+     "closed_at": "2026-11-03T19:16:11Z",
+     "created_at": "2026-11-03T19:15:04Z",
+     "merged_at": null,
+     "number": 495,
+     "state": "closed",
+     "title": "Close callback buffers even when caching fails",
+     "user": {
+      "login": "liuyinchu"
+     }
+    },
+    {
+     "closed_at": "2026-11-03T13:42:00Z",
+     "created_at": "2026-11-03T13:29:23Z",
+     "merged_at": null,
+     "number": 494,
+     "state": "closed",
+     "title": "Preserve cached response status during 304 revalidation",
+     "user": {
+      "login": "jeromeyyy"
+     }
+    },
+    {
+     "closed_at": "2026-10-30T20:28:13Z",
+     "created_at": "2026-10-30T18:12:28Z",
+     "merged_at": "2026-10-30T20:28:13Z",
+     "number": 493,
+     "state": "closed",
+     "title": "build(deps): bump msgpack from 1.2.1 to 1.2.3",
+     "user": {
+      "login": "dependabot[bot]"
+     }
+    },
+    {
+     "closed_at": "2026-10-30T18:11:10Z",
+     "created_at": "2026-10-30T16:53:01Z",
+     "merged_at": "2026-10-30T18:11:10Z",
+     "number": 492,
+     "state": "closed",
+     "title": "build(deps): bump the actions group across 1 directory with 3 updates",
+     "user": {
+      "login": "dependabot[bot]"
+     }
+    },
+    {
+     "closed_at": "2026-10-30T16:52:58Z",
+     "created_at": "2026-10-28T16:53:10Z",
+     "merged_at": null,
+     "number": 491,
+     "state": "closed",
+     "title": "build(deps): bump the actions group across 1 directory with 2 updates",
+     "user": {
+      "login": "dependabot[bot]"
+     }
+    },
+    {
+     "closed_at": "2026-10-28T16:53:07Z",
+     "created_at": "2026-10-27T16:53:06Z",
+     "merged_at": null,
+     "number": 489,
+     "state": "closed",
+     "title": "build(deps): bump pypa/gh-action-pypi-publish from 1.14.2 to 1.14.3 in the actions group",
+     "user": {
+      "login": "dependabot[bot]"
+     }
+    },
+    {
+     "closed_at": "2026-10-28T04:42:15Z",
+     "created_at": "2026-10-28T00:24:09Z",
+     "merged_at": null,
+     "number": 490,
+     "state": "closed",
+     "title": "Accept quoted numeric Cache-Control arguments",
+     "user": {
+      "login": "edsonsims"
+     }
+    },
+    {
+     "closed_at": "2026-10-25T16:04:08Z",
+     "created_at": "2026-10-25T15:26:24Z",
+     "merged_at": "2026-10-25T16:04:08Z",
+     "number": 488,
+     "state": "closed",
+     "title": "build(deps): bump setuptools from 83.0.0 to 84.1.0",
+     "user": {
+      "login": "dependabot[bot]"
+     }
+    },
+    {
+     "closed_at": "2026-10-25T15:23:59Z",
+     "created_at": "2026-10-25T14:47:06Z",
+     "merged_at": "2026-10-25T15:23:59Z",
+     "number": 487,
+     "state": "closed",
+     "title": "Allow uv_build 0.13.x",
+     "user": {
+      "login": "jelly"
+     }
+    },
+    {
+     "closed_at": "2026-10-23T20:15:17Z",
+     "created_at": "2026-10-23T18:42:45Z",
+     "merged_at": "2026-10-23T20:15:17Z",
+     "number": 486,
+     "state": "closed",
+     "title": "build(deps): bump certifi from 2025.10.5 to 2026.10.19",
+     "user": {
+      "login": "dependabot[bot]"
+     }
+    },
+    {
+     "closed_at": "2026-10-23T17:37:54Z",
+     "created_at": "2026-08-28T12:28:39Z",
+     "merged_at": "2026-10-23T17:37:54Z",
+     "number": 466,
+     "state": "closed",
+     "title": "don't lower case-sensitive user info embedded in URLs",
+     "user": {
+      "login": "ogalland-tob"
+     }
+    },
+    {
+     "closed_at": "2026-10-23T17:37:27Z",
+     "created_at": "2026-10-22T16:53:00Z",
+     "merged_at": "2026-10-23T17:37:27Z",
+     "number": 485,
+     "state": "closed",
+     "title": "build(deps): bump the actions group across 1 directory with 2 updates",
+     "user": {
+      "login": "dependabot[bot]"
+     }
+    }
+   ],
+   "status": 200
+  }
+ },
+ "summary": {
+  "complete": true,
+  "pull_requests": 12,
+  "repo": "psf/cachecontrol",
+  "reviews": 8,
+  "workflow_runs": 50
+ }
+}

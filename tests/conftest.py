@@ -4,6 +4,8 @@ import httpx
 import pytest
 
 import connector_github
+import delivery_fixtures
+import delivery_ingest
 import seed_books
 import server
 
@@ -74,3 +76,32 @@ def mock_github(monkeypatch):
 
     install.calls = calls  # type: ignore[attr-defined]
     return install
+
+
+FIXTURE_REPO = "psf/cachecontrol"
+FIXTURE_NAME = "github_delivery"
+FIXTURE_MAX_PRS = 12
+FIXTURE_MAX_RUNS = 50
+
+
+@pytest.fixture
+def delivery_api(monkeypatch):
+    """Point delivery_ingest at the recorded GitHub responses, not the network."""
+    transport = delivery_fixtures.mock_transport(FIXTURE_NAME)
+    real_client = httpx.Client
+
+    def factory(*args, **kwargs):
+        kwargs["transport"] = transport
+        return real_client(*args, **kwargs)
+
+    monkeypatch.setattr(delivery_ingest.httpx, "Client", factory)
+    return transport
+
+
+@pytest.fixture
+def delivery_db(governance_db, delivery_api):
+    """A database with the recorded repository already ingested."""
+    delivery_ingest.ingest(
+        FIXTURE_REPO, max_prs=FIXTURE_MAX_PRS, max_runs=FIXTURE_MAX_RUNS, db=governance_db
+    )
+    return governance_db

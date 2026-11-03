@@ -717,6 +717,78 @@ TOTAL                   1466    233    84%
 `delivery_fixtures.py` is low because its recording path talks to the live API
 and is exercised by hand, not by the suite.
 
+## Real model results
+
+Numbers below are from runs against `gpt-4o-mini`. The deterministic eval
+(`--mode tools`) scores 20/20 and is a separate thing: it checks the metrics
+and citations, not the model.
+
+| Run | Scorer | Score |
+|---|---|---|
+| Run 1, as recorded | original | 12 / 20 |
+| Run 2, as recorded | original | 13 / 20 |
+| Run 2, re-scored | fixed | 13 / 20 |
+| Run 3 onwards, after the tool change | fixed | not yet run |
+
+Run 2's answers are saved in
+`evals/results/delivery-real-run2-before-fixes.json`. Re-derive the
+re-scored figure with:
+
+```bash
+python evals/run_delivery_eval.py --rescore evals/results/delivery-real-run2-before-fixes.json
+```
+
+The last row is a placeholder. The `summary` field and the removal of
+`per_pull_request` landed after run 2, so no recorded run reflects them; that
+row stays empty until a fresh run is done. **The re-scored figure is not the
+original one** — run 2 as recorded scored 13/20 under the original scorer, and
+re-scoring it under the fixed scorer also gives 13/20.
+
+### What the scorer fixes actually changed
+
+Nothing, on this run. Re-scoring moved no question: 13/20 before and after.
+Of ten individual failure reasons, one was resolved — q12's answer ended
+"is 3.5.", and the original rules treated the full stop as part of the number.
+q12 still fails because the answer never states the total. Every other failure
+had a cause the rules were right to flag.
+
+The scorer defects were real and are fixed with tests, but on this run they
+were not what cost the points.
+
+### Which failures were what
+
+**Model behaviour** — the answer is wrong or does not do the task:
+
+- **q07** asked for the median reviews per pull request. The metric computed
+  `0.0`; the answer said `0.5`. That is the median you get from twelve values
+  if you count six zeros instead of seven, so the model recomputed the
+  statistic from the per-row values rather than quoting the one it was given.
+  This is what motivated the `summary` field and dropping `per_pull_request`,
+  but the run itself is a model failure.
+- **q14** asked how many merges fell in the first week that had any. It needs
+  the week discovered and then used as a window. The answer was "no merges in
+  the first week of January 2023" — a window the model invented, for a year
+  with no data. No tool affordance was added for this.
+- **q19** asked for "team velocity", which is not a metric the server has.
+  The answer reported `3.5 merged pull requests per week`, presenting the
+  merge-frequency figure as a velocity. That is fabrication, not a refusal,
+  and broadening the refusal vocabulary does not and should not rescue it.
+- **q01 and q05** stated the figure correctly but never stated the sample
+  size the question's rules also require.
+
+**Scorer defect** — the answer was acceptable and the rules were wrong:
+
+- **q12** on its "value" check only, as above. The rest of q12's failure is
+  not a scorer defect.
+
+**Question defect** — the question could not be answered as written:
+
+- **q04** named no repository. See the note in the evaluation results section
+  above; the wording is now fixed and the original is recorded there.
+
+q14 and q19 are left exactly as they were, and no field was added to make
+them easier. They are recorded here as genuine model failures.
+
 ## Limits
 
 - **One public repository at a time.** The repository is configurable, but the

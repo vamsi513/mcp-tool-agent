@@ -30,11 +30,13 @@ import re
 import sys
 from collections.abc import Iterator
 from contextlib import contextmanager
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+import audit  # noqa: E402
 import delivery_fixtures  # noqa: E402
 from tests.delivery_eval_core import (  # noqa: E402
     expectations,
@@ -106,40 +108,72 @@ def score_real_answer(question: dict, answer: str, expected: dict[str, Any]) -> 
     return failures
 
 
+@contextmanager
+def _record_tool_calls() -> Iterator[list[dict]]:
+    """Capture every tool call the agent makes, with its arguments and result.
+
+    Wraps agent.call_tool_safely for the duration, which is the one place
+    every call goes through. The list is shared, so a caller clears it
+    between questions.
+    """
+    import agent
+
+    calls: list[dict] = []
+    original = agent.call_tool_safely
+
+    async def recording(session: Any, name: str, arguments_json: str) -> str:
+        result = await original(session, name, arguments_json)
+        calls.append({"tool": name, "arguments": arguments_json, "result": result})
+        return result
+
+    agent.call_tool_safely = recording  # type: ignore[assignment]
+    try:
+        yield calls
+    finally:
+        agent.call_tool_safely = original  # type: ignore[assignment]
+
+
 async def _run_real(model: str, user: str, max_turns: int) -> list[dict]:
     import agent
 
     _, questions = load_questions()
     expected = expectations()
     results = []
-    for question in questions:
-        try:
-            answer = await agent.run(
-                question["question"], model=model, max_turns=max_turns, user=user
-            )
-        except Exception as exc:
+
+    with _record_tool_calls() as calls:
+        for question in questions:
+            calls.clear()
+            started = datetime.now(UTC).isoformat(timespec="milliseconds")
+            answer = ""
+            failures: list[str]
+            try:
+                answer = await agent.run(
+                    question["question"], model=model, max_turns=max_turns, user=user
+                )
+            except Exception as exc:
+                failures = [f"{exc.__class__.__name__}: {exc}"]
+            else:
+                failures = score_real_answer(question, answer, expected)
+
+            # The governed server writes one audit row per attempt, so this
+            # shows what the policy decided even when the tool never ran.
+            try:
+                decisions = audit.query(since=started, limit=100)
+            except Exception:
+                decisions = []
+
             results.append(
                 {
                     "id": question["id"],
                     "question": question["question"],
                     "tool": question["tool"],
-                    "passed": False,
-                    "failures": [f"{exc.__class__.__name__}: {exc}"],
-                    "answer": "",
+                    "passed": not failures,
+                    "failures": failures,
+                    "answer": answer,
+                    "trace": list(calls),
+                    "audit": list(reversed(decisions)),
                 }
             )
-            continue
-        failures = score_real_answer(question, answer, expected)
-        results.append(
-            {
-                "id": question["id"],
-                "question": question["question"],
-                "tool": question["tool"],
-                "passed": not failures,
-                "failures": failures,
-                "answer": answer,
-            }
-        )
     return results
 
 
@@ -182,6 +216,57 @@ def eval_database(explicit: str | None) -> Iterator[Path]:
             os.environ["GOVERNANCE_DB"] = previous
 
 
+def _clip(text: str, limit: int) -> str:
+    text = " ".join(str(text).split())
+    return text if len(text) <= limit else text[:limit] + f"...[{len(text)} chars]"
+
+
+def print_trace(results: list[dict], mode: str, width: int = 1200) -> None:
+    """Per question: the calls the model made, what came back, what policy said."""
+    print("=" * 78)
+    print("TRACE")
+    if mode == "tools":
+        print(
+            "Tools mode calls the tools in process, so the governed server is "
+            "not involved and there are no policy decisions to show. Use "
+            "--mode real to see them."
+        )
+    print("=" * 78)
+
+    for row in results:
+        mark = "pass" if row["passed"] else "FAIL"
+        print()
+        print(f"[{mark}] {row['id']}")
+        print(f"  question    : {row['question']}")
+
+        calls = row.get("trace") or []
+        if not calls:
+            print("  tool calls  : none")
+        for index, call in enumerate(calls, start=1):
+            arguments = call["arguments"]
+            if not isinstance(arguments, str):
+                arguments = json.dumps(arguments, sort_keys=True)
+            print(f"  call {index}      : {call['tool']}({_clip(arguments, 300)})")
+            print(f"  result {index}    : {_clip(call['result'], width)}")
+
+        decisions = row.get("audit") or []
+        if decisions:
+            for decision in decisions:
+                reason = f"  reason={decision['reason']}" if decision["reason"] else ""
+                print(
+                    f"  policy      : {decision['tool']} -> {decision['decision']}"
+                    f" ({decision['outcome']}){reason}"
+                )
+                print(f"                args={json.dumps(decision['arguments'], sort_keys=True)}")
+        elif mode == "real":
+            print("  policy      : no audit rows (the tool was never reached)")
+
+        if "answer" in row:
+            print(f"  answer      : {_clip(row['answer'], width)}")
+        for failure in row["failures"]:
+            print(f"  failure     : {failure}")
+
+
 def report(results: list[dict], mode: str) -> None:
     width = max(len(r["id"]) for r in results)
     print(f"mode={mode}  questions={len(results)}")
@@ -205,6 +290,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--user", default="bob", help="policy identity for --mode real")
     parser.add_argument("--max-turns", type=int, default=6)
     parser.add_argument("--json", action="store_true")
+    parser.add_argument(
+        "--show-trace",
+        action="store_true",
+        help="print the tool calls, their results and the policy decisions "
+             "behind every question",
+    )
     parser.add_argument(
         "--db",
         default=None,
@@ -236,6 +327,9 @@ def main(argv: list[str] | None = None) -> int:
         )
         sys.stdout.write("\n")
     else:
+        if args.show_trace:
+            print_trace(results, args.mode)
+            print()
         report(results, args.mode)
 
     return 0 if all(r["passed"] for r in results) else 1

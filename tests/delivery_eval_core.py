@@ -166,6 +166,12 @@ def run_all() -> list[dict]:
                 "tool": question["tool"],
                 "passed": not failures,
                 "failures": failures,
+                # Tools mode makes exactly one call, with the arguments the
+                # question declares. Recorded so --show-trace can print it.
+                "trace": [
+                    {"tool": question["tool"], "arguments": arguments, "result": result}
+                ],
+                "audit": [],
             }
         )
     return results

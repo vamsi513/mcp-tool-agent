@@ -164,6 +164,9 @@ def ingested_database(
         target = Path(db)
 
     try:
+        # Replaying stays installed for the whole block, not just the ingest.
+        # A caller that ingests again inside the block must also be served
+        # from the recording rather than falling through to the network.
         with replaying(name):
             delivery_ingest.ingest(
                 metadata["repo"],
@@ -171,7 +174,7 @@ def ingested_database(
                 max_runs=metadata["max_runs"],
                 db=target,
             )
-        yield target
+            yield target
     finally:
         if holder is not None:
             holder.cleanup()

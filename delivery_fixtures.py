@@ -53,10 +53,30 @@ def load_fixtures(name: str) -> dict[str, Any]:
 
 
 def mock_transport(name: str) -> httpx.MockTransport:
-    """A transport that replays a recorded file and fails loudly on a miss."""
+    """A transport that replays a recorded file and fails loudly on a miss.
+
+    It only answers for the configured GitHub origin. A request to any other
+    host is an error rather than a fixture miss, so this layer can never end
+    up serving, say, a model provider's API.
+    """
     responses = load_fixtures(name)
 
     def handler(request: httpx.Request) -> httpx.Response:
+        from connector_github import api_base
+
+        expected = httpx.URL(api_base())
+        if (request.url.scheme, request.url.host, request.url.port) != (
+            expected.scheme,
+            expected.host,
+            expected.port,
+        ):
+            raise AssertionError(
+                f"the GitHub fixture replay was asked for {request.url.scheme}://"
+                f"{request.url.netloc.decode()}, which is not the configured "
+                f"GitHub origin ({api_base()}). This layer must only ever "
+                f"intercept GitHub requests."
+            )
+
         key = fixture_key(request)
         recorded = responses.get(key)
         if recorded is None:
@@ -125,21 +145,27 @@ def fixture_metadata(name: str) -> dict[str, Any]:
 
 @contextmanager
 def replaying(name: str) -> Iterator[httpx.MockTransport]:
-    """Point delivery_ingest at a recorded file for the duration of the block."""
+    """Point delivery_ingest at a recorded file for the duration of the block.
+
+    Only delivery_ingest.http_client is swapped. Rebinding httpx.Client would
+    change a global that other libraries inspect — the openai client calls
+    isinstance(x, httpx.Client) when building a request, which raises a
+    TypeError if that name is a function rather than a class.
+    """
     import delivery_ingest
 
     transport = mock_transport(name)
-    real_client = httpx.Client
+    original = delivery_ingest.http_client
 
-    def factory(*args: Any, **kwargs: Any) -> httpx.Client:
+    def factory(**kwargs: Any) -> httpx.Client:
         kwargs["transport"] = transport
-        return real_client(*args, **kwargs)
+        return httpx.Client(**kwargs)
 
-    delivery_ingest.httpx.Client = factory  # type: ignore[misc,assignment]
+    delivery_ingest.http_client = factory  # type: ignore[assignment]
     try:
         yield transport
     finally:
-        delivery_ingest.httpx.Client = real_client  # type: ignore[misc]
+        delivery_ingest.http_client = original  # type: ignore[assignment]
 
 
 @contextmanager
@@ -164,9 +190,10 @@ def ingested_database(
         target = Path(db)
 
     try:
-        # Replaying stays installed for the whole block, not just the ingest.
-        # A caller that ingests again inside the block must also be served
-        # from the recording rather than falling through to the network.
+        # Replaying covers the ingest and nothing else. It must not be active
+        # while a caller runs the agent: see replaying() for why. A caller
+        # that needs to ingest again inside the block enters replaying()
+        # itself, which the delivery_api test fixture does.
         with replaying(name):
             delivery_ingest.ingest(
                 metadata["repo"],
@@ -174,7 +201,7 @@ def ingested_database(
                 max_runs=metadata["max_runs"],
                 db=target,
             )
-            yield target
+        yield target
     finally:
         if holder is not None:
             holder.cleanup()

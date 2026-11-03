@@ -108,6 +108,37 @@ def score_real_answer(question: dict, answer: str, expected: dict[str, Any]) -> 
     return failures
 
 
+def describe_exception(exc: BaseException) -> list[str]:
+    """Flatten an exception into the underlying causes, one line each.
+
+    anyio wraps a failure inside the agent in nested ExceptionGroups, so the
+    bare message is "unhandled errors in a TaskGroup" and says nothing about
+    what actually went wrong. This walks the group and the __cause__ chain
+    and names the real error with the frame it came from.
+    """
+    if isinstance(exc, BaseExceptionGroup):
+        lines: list[str] = []
+        for sub in exc.exceptions:
+            lines.extend(describe_exception(sub))
+        return lines or [f"{type(exc).__name__}: {exc}"]
+
+    where = ""
+    traceback = exc.__traceback__
+    last = None
+    while traceback is not None:
+        last = traceback
+        traceback = traceback.tb_next
+    if last is not None:
+        frame = last.tb_frame
+        where = f" at {Path(frame.f_code.co_filename).name}:{last.tb_lineno}"
+
+    described = [f"{type(exc).__module__}.{type(exc).__name__}: {exc}{where}"]
+    cause = exc.__cause__ or exc.__context__
+    if cause is not None and cause is not exc:
+        described.extend(f"  caused by {line}" for line in describe_exception(cause))
+    return described
+
+
 @contextmanager
 def _record_tool_calls() -> Iterator[list[dict]]:
     """Capture every tool call the agent makes, with its arguments and result.
@@ -150,8 +181,9 @@ async def _run_real(model: str, user: str, max_turns: int) -> list[dict]:
                 answer = await agent.run(
                     question["question"], model=model, max_turns=max_turns, user=user
                 )
-            except Exception as exc:
-                failures = [f"{exc.__class__.__name__}: {exc}"]
+            except BaseException as exc:
+                # Report the sub-exception, not "unhandled errors in a TaskGroup".
+                failures = describe_exception(exc)
             else:
                 failures = score_real_answer(question, answer, expected)
 

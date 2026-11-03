@@ -271,3 +271,106 @@ def test_real_mode_runs_all_twenty_with_a_stubbed_model(monkeypatch):
     # A cooperative model that reports exactly what the tool returned should
     # satisfy the rule checks on every question.
     assert passed == 20, [(r["id"], r["failures"]) for r in results if not r["passed"]]
+
+
+# --- real mode over HTTP, against a local fake model --------------------
+
+
+def _plan_from_questions():
+    """Map each question to the tool call that should answer it."""
+    from tests.delivery_eval_core import (
+        expectations,
+        load_questions,
+        resolve_arguments,
+    )
+
+    _, questions = load_questions()
+    expected = expectations()
+    return {
+        q["question"]: (q["tool"], resolve_arguments(q.get("arguments") or {}, expected))
+        for q in questions
+    }, questions
+
+
+def test_real_mode_over_http_against_a_fake_model(monkeypatch):
+    """Regression guard for the replay layer leaking into the model's client.
+
+    Unlike the stubbed-client test, this leaves openai's own transport in
+    place and points it at a local server, so anything that breaks httpx for
+    the model shows up here. When replaying() rebound the global
+    httpx.Client, every question failed with a TypeError from
+    isinstance(value, httpx.Client) inside openai's request builder, and the
+    fake server saw no requests at all.
+    """
+    sys.path.insert(0, str(REPO_ROOT / "evals"))
+    import asyncio
+
+    import run_delivery_eval as runner
+
+    from tests.fake_openai import FakeOpenAI
+
+    plan, questions = _plan_from_questions()
+
+    with FakeOpenAI(plan) as fake:
+        monkeypatch.setenv("OPENAI_API_KEY", "fake-key-not-used")
+        monkeypatch.setenv("OPENAI_BASE_URL", fake.base_url)
+        monkeypatch.setenv("POLICY_FILE", "policy.example.yaml")
+
+        with runner.eval_database(None):
+            results = asyncio.run(runner._run_real("fake-model", "bob", 4))
+
+        # The model was really reached over HTTP: two calls per question,
+        # one to choose the tool and one to answer.
+        assert len(fake.requests) == 2 * len(questions)
+
+    assert len(results) == 20
+    assert all(
+        not any("TypeError" in failure for failure in row["failures"]) for row in results
+    ), [r["failures"] for r in results if r["failures"]]
+
+    passed = sum(1 for r in results if r["passed"])
+    assert passed == 20, [(r["id"], r["failures"]) for r in results if not r["passed"]]
+
+    # Each question reached the tool the question declares.
+    for row, question in zip(results, questions, strict=True):
+        assert row["id"] == question["id"]
+        called = [call["tool"] for call in row["trace"]]
+        assert called == [question["tool"]], (row["id"], called)
+
+
+def test_replay_layer_leaves_the_global_httpx_client_alone():
+    """httpx.Client must stay a class: libraries check isinstance against it."""
+    import httpx
+
+    import delivery_fixtures
+
+    before = httpx.Client
+    with delivery_fixtures.replaying("github_delivery"):
+        assert httpx.Client is before
+        assert isinstance(httpx.Client, type)
+        # An unrelated client still behaves normally.
+        isinstance(httpx.Client(), httpx.Client)
+    assert httpx.Client is before
+
+
+def test_replay_layer_refuses_a_non_github_host():
+    """The GitHub fixture must never answer for another origin."""
+    import httpx
+
+    import delivery_fixtures
+
+    transport = delivery_fixtures.mock_transport("github_delivery")
+    with httpx.Client(transport=transport) as client:
+        with pytest.raises(AssertionError, match="not the configured GitHub origin"):
+            client.post("https://api.openai.com/v1/chat/completions", json={})
+
+
+def test_ingested_database_does_not_replay_after_the_ingest():
+    """The replay layer is off by the time the caller gets the database."""
+    import delivery_fixtures
+    import delivery_ingest
+
+    original = delivery_ingest.http_client
+    with delivery_fixtures.ingested_database() as db:
+        assert db.exists()
+        assert delivery_ingest.http_client is original

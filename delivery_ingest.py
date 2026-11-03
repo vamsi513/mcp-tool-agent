@@ -89,6 +89,16 @@ CREATE INDEX IF NOT EXISTS dm_runs_repo_idx   ON dm_workflow_runs (repo, created
 """
 
 
+def http_client(**kwargs: Any) -> httpx.Client:
+    """The HTTP client this module uses, in one place.
+
+    The fixture replay layer swaps this function out. It must never rebind
+    httpx.Client itself: that is a global, and libraries which check
+    isinstance(x, httpx.Client) break when it is replaced by a function.
+    """
+    return httpx.Client(**kwargs)
+
+
 def init(db: str | os.PathLike[str] | None = None) -> None:
     """Create the delivery tables if they are not there yet."""
     with closing(connect(db)) as conn, conn:
@@ -122,7 +132,7 @@ def _get_pages(path: str, params: dict[str, Any], max_items: int) -> list[dict]:
     # Never ask for more rows than the caller will keep.
     query: dict[str, Any] | None = {**params, "per_page": min(PER_PAGE, max(1, max_items))}
 
-    with httpx.Client(timeout=TIMEOUT_SECONDS) as client:
+    with http_client(timeout=TIMEOUT_SECONDS) as client:
         while url and len(items) < max_items:
             try:
                 resp = client.get(url, headers=_headers(), params=query)
@@ -146,7 +156,7 @@ def _get_pages(path: str, params: dict[str, Any], max_items: int) -> list[dict]:
 
 
 def _get_one(path: str, params: dict[str, Any] | None = None) -> Any:
-    with httpx.Client(timeout=TIMEOUT_SECONDS) as client:
+    with http_client(timeout=TIMEOUT_SECONDS) as client:
         try:
             resp = client.get(f"{api_base()}{path}", headers=_headers(), params=params)
         except httpx.RequestError as exc:

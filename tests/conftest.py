@@ -93,12 +93,14 @@ def delivery_api():
 
 
 @pytest.fixture
-def delivery_db(governance_db):
+def delivery_db(governance_db, delivery_api):
     """A database with the recorded repository already ingested.
 
     Built through delivery_fixtures.ingested_database, which is the same
     helper evals/run_delivery_eval.py uses, so the runner and the tests
-    cannot drift apart.
+    cannot drift apart. Depending on delivery_api keeps the replay active
+    for the whole test, so a test that ingests again in its body is still
+    served from the recording and makes no network call.
     """
     with delivery_fixtures.ingested_database(FIXTURE_NAME, db=governance_db) as path:
         yield path

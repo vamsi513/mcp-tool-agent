@@ -4,6 +4,7 @@ import httpx
 import pytest
 
 import connector_github
+import delivery_fixtures
 import seed_books
 import server
 
@@ -30,13 +31,13 @@ def mock_http(monkeypatch):
     """Replace httpx.Client inside server with one backed by a caller-supplied handler."""
 
     def install(handler):
-        real_client = httpx.Client
-
-        def factory(*args, **kwargs):
+        def factory(**kwargs):
             kwargs["transport"] = httpx.MockTransport(handler)
-            return real_client(*args, **kwargs)
+            return httpx.Client(**kwargs)
 
-        monkeypatch.setattr(server.httpx, "Client", factory)
+        # Patches the module's own factory. Assigning to server.httpx.Client
+        # would rebind httpx.Client for the whole process.
+        monkeypatch.setattr(server, "http_client", factory)
 
     return install
 
@@ -59,18 +60,46 @@ def mock_github(monkeypatch):
     calls: list[tuple[str, str]] = []
 
     def install(handler):
-        real_client = httpx.Client
-
         def recording(request: httpx.Request) -> httpx.Response:
             calls.append((request.method, request.url.path))
             return handler(request)
 
-        def factory(*args, **kwargs):
+        def factory(**kwargs):
             kwargs["transport"] = httpx.MockTransport(recording)
-            return real_client(*args, **kwargs)
+            return httpx.Client(**kwargs)
 
-        monkeypatch.setattr(connector_github.httpx, "Client", factory)
+        # As above: the module's factory, never the global class.
+        monkeypatch.setattr(connector_github, "http_client", factory)
         return calls
 
     install.calls = calls  # type: ignore[attr-defined]
     return install
+
+
+FIXTURE_NAME = "github_delivery"
+# One source of truth: the page sizes come from the fixture that was recorded.
+_FIXTURE_META = delivery_fixtures.fixture_metadata(FIXTURE_NAME)
+FIXTURE_REPO = _FIXTURE_META["repo"]
+FIXTURE_MAX_PRS = _FIXTURE_META["max_prs"]
+FIXTURE_MAX_RUNS = _FIXTURE_META["max_runs"]
+
+
+@pytest.fixture
+def delivery_api():
+    """Point delivery_ingest at the recorded GitHub responses, not the network."""
+    with delivery_fixtures.replaying(FIXTURE_NAME) as transport:
+        yield transport
+
+
+@pytest.fixture
+def delivery_db(governance_db, delivery_api):
+    """A database with the recorded repository already ingested.
+
+    Built through delivery_fixtures.ingested_database, which is the same
+    helper evals/run_delivery_eval.py uses, so the runner and the tests
+    cannot drift apart. Depending on delivery_api keeps the replay active
+    for the whole test, so a test that ingests again in its body is still
+    served from the recording and makes no network call.
+    """
+    with delivery_fixtures.ingested_database(FIXTURE_NAME, db=governance_db) as path:
+        yield path

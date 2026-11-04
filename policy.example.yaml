@@ -41,6 +41,9 @@ roles:
       - search_github_repos
       - list_issues
       - get_issue
+      - list_delivery_repos
+      - delivery_metric
+      - pull_request_detail
     rules:
       list_issues:
         owners: ["python", "octocat"]
@@ -50,6 +53,12 @@ roles:
       search_github_repos:
         owners: ["python", "octocat"]
         max_limit: 10
+      # Delivery metrics are read-only over data already ingested locally, so
+      # the owner allowlist is the only restriction that applies.
+      delivery_metric:
+        owners: ["python", "octocat", "psf"]
+      pull_request_detail:
+        owners: ["python", "octocat", "psf"]
 
   maintainer:
     tools:
@@ -60,6 +69,9 @@ roles:
       - get_issue
       - prepare_issue_comment
       - confirm_issue_comment
+      - list_delivery_repos
+      - delivery_metric
+      - pull_request_detail
     rules:
       list_issues:
         owners: ["python", "octocat"]

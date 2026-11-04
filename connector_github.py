@@ -166,9 +166,20 @@ def _raise_for_status(resp: httpx.Response) -> None:
     raise ConnectorError(f"GitHub returned {resp.status_code}{suffix}")
 
 
+def http_client(**kwargs: Any) -> httpx.Client:
+    """The HTTP client this module uses, in one place.
+
+    Tests swap this function out. Rebinding httpx.Client instead would change
+    a global that other libraries inspect — a client that checks
+    isinstance(x, httpx.Client) raises TypeError once that name is a function
+    rather than a class.
+    """
+    return httpx.Client(**kwargs)
+
+
 def _request(method: str, path: str, **kwargs: Any) -> httpx.Response:
     try:
-        with httpx.Client(timeout=TIMEOUT_SECONDS) as client:
+        with http_client(timeout=TIMEOUT_SECONDS) as client:
             resp = client.request(method, f"{api_base()}{path}", headers=_headers(), **kwargs)
     except httpx.RequestError as exc:
         raise ConnectorError(f"request to GitHub failed: {exc.__class__.__name__}") from exc

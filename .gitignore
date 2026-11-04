@@ -16,3 +16,6 @@ governance.db-wal
 governance.db-shm
 policy.yaml
 prices.yaml
+
+# scratch database written while recording fixtures
+tests/fixtures/_record_scratch.db*

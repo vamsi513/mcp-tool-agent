@@ -506,3 +506,349 @@ unauthorised user ever wrote.
 
 `PyYAML==6.0.3` was added, since the policy and price files are YAML. No
 existing pin was changed and the MCP SDK stays on `1.29.1`.
+
+---
+
+# Delivery metrics
+
+Read-only delivery metrics for one public GitHub repository, computed in SQL
+and answered by the agent with the pull request numbers or workflow run ids
+behind every figure. Nothing in this layer writes to GitHub.
+
+## What it is
+
+| Piece | File | Role |
+|---|---|---|
+| Ingest | `delivery_ingest.py` | Pulls pull requests, reviews and workflow runs into the store. Idempotent, rate-limit aware. |
+| Metrics | `delivery_metrics.py` | Five metrics computed in SQL, each recording the rows it used. |
+| Tools | `delivery_tools.py` | Three agent tools. Every answer cites its rows; missing data is refused. |
+| GraphQL | `delivery_graphql.py` | A read-only query endpoint over the same metrics. |
+| Fixtures | `delivery_fixtures.py` | Records real API responses and replays them so tests need no network. |
+| Questions | `evals/delivery_questions.yaml` | 20 hand-written questions scored against independently computed values. |
+
+## The metrics
+
+All five are deliberately simple. Each result states its own definition, so
+nobody has to infer what was measured.
+
+| Metric | Definition | Unit |
+|---|---|---|
+| `pr_cycle_time` | Hours from pull request creation to merge, over merged pull requests whose merge falls in the window. Unmerged ones are excluded. | hours |
+| `time_to_first_review` | Hours from creation to the earliest submitted review, over pull requests created in the window that got at least one review. | hours |
+| `review_count` | Submitted reviews per pull request, over pull requests created in the window. No reviews counts as zero. | reviews per PR |
+| `workflow_failure_rate` | Share of completed runs created in the window whose conclusion is `failure`. Cancelled, skipped and in-progress runs are excluded from both sides of the ratio. | ratio |
+| `merge_frequency` | Merged pull requests per calendar week, bucketed by the Monday of the merge week. Weeks with no merges do not appear. | merges per week |
+
+The reported `value` is the **median** for the three distribution metrics;
+`mean`, `min` and `max` come back alongside it.
+
+Every result carries the identifiers it was computed from, and those same
+identifiers are written to `dm_metric_computations`, so a number can be traced
+back to its inputs after the fact.
+
+## Running it
+
+### The evaluation needs no ingest
+
+The eval is self-contained. It builds a temporary database from the recorded
+fixture in `tests/fixtures`, through the same ingest code path the tests use,
+and deletes it on exit. It does not read or write the default database, and it
+reaches no network.
+
+```bash
+python evals/run_delivery_eval.py            # the 20 questions, no model, no network
+python -m pytest tests/test_delivery_eval.py -q
+```
+
+To score against a database you already ingested instead:
+
+```bash
+python evals/run_delivery_eval.py --db ./governance.db
+```
+
+That prints a warning, because the expected answers come from the recorded
+fixture: against live data the questions will be reported as failures even
+when the metrics are correct.
+
+### Ingesting live data
+
+Ingest is for querying a repository yourself, through the tools, the agent or
+the GraphQL endpoint. It is not a prerequisite for the eval. It is read-only
+and works without a token; set `GITHUB_TOKEN` to raise the rate limit.
+
+```bash
+# Optional, never printed or stored:
+export GITHUB_TOKEN=...
+
+python delivery_ingest.py psf/cachecontrol --max-prs 100 --max-runs 200
+python delivery_ingest.py --list
+```
+
+Re-running is safe: rows are written with an UPSERT keyed on the GitHub id, so
+a second pass updates in place. If the rate limit is hit the run stops with two
+requests to spare, keeps what it fetched, marks the repository incomplete, and
+the next run continues.
+
+Serve the read-only GraphQL endpoint:
+
+```bash
+python delivery_graphql.py --port 8099
+
+curl -s localhost:8099/graphql -H 'content-type: application/json' -d '{
+  "query": "{ repos { name pullRequests } metric(repo: \"psf/cachecontrol\", metric: PR_CYCLE_TIME) { value unit sampleSize sourcePullRequests } }"
+}'
+```
+
+The schema has a `Query` type and no `Mutation` or `Subscription`, and any
+non-query operation is rejected before execution.
+
+Re-record the test fixtures against the live API:
+
+```bash
+python delivery_fixtures.py psf/cachecontrol --max-prs 12 --max-runs 50
+```
+
+Run the questions through a real model (needs `OPENAI_API_KEY`; the agent
+reaches the tools through the governed server, so the policy applies). This
+also builds its own temporary database from the fixture, so no ingest is
+needed first:
+
+```bash
+python evals/run_delivery_eval.py --mode real --model gpt-4o-mini --user bob
+```
+
+Note that the policy applies in this mode: `bob` may only query owners on the
+reader allowlist, so a question about a repository outside it is denied by the
+policy before the tool is reached. That is still a refusal, and the scorer
+counts it as one.
+
+## Citations and refusals
+
+A metric answer names its sources:
+
+```json
+{
+ "repo": "psf/cachecontrol",
+ "metric": "pr_cycle_time",
+ "definition": "Hours from pull request creation to merge, over merged pull requests whose merge falls in the window. Unmerged pull requests are excluded.",
+ "unit": "hours",
+ "sample_size": 7,
+ "value": 1.5422,
+ "mean": 197.178,
+ "min": 0.6147,
+ "max": 1349.1542,
+ "statistic": "median",
+ "citations": {"pull_requests": [466, 485, 486, 487, 488, 492, 493]},
+ "refused": false
+}
+```
+
+A repository that was never ingested is refused rather than answered:
+
+```json
+{
+ "refused": true,
+ "reason": "torvalds/linux has not been ingested, so there is no data to report",
+ "ingested_repos": ["psf/cachecontrol"],
+ "remedy": "run the ingest for this repository first"
+}
+```
+
+A window with no matching rows is also refused, with `sample_size: 0` and a
+null value, rather than reporting zero as though it had been measured.
+
+## Measured results
+
+From the recorded fixture (`psf/cachecontrol`: 12 pull requests, 8 reviews,
+50 workflow runs):
+
+```
+pr_cycle_time          value=1.5422   unit=hours                          n=7
+time_to_first_review   value=1.5411   unit=hours                          n=5
+review_count           value=0.0      unit=reviews per pull request       n=12
+merge_frequency        value=3.5      unit=merged pull requests per week  n=7
+workflow_failure_rate  value=0.1667   unit=ratio                          n=48
+```
+
+Eval, run with `python evals/run_delivery_eval.py`:
+
+```
+mode=tools  questions=20
+20/20 passed
+```
+
+All twenty pass. Each expected number is computed in
+`tests/independent_metrics.py` from the recorded JSON using `datetime` and
+`statistics`; that module does not import `delivery_metrics`, and a test
+asserts as much on the import graph, so the SQL cannot agree with itself.
+
+One question was revised after a real-model run. **q04** originally read
+*"How many merged pull requests is the cycle time based on?"* — an ambiguous
+question, original failure documented: it named no repository, and because
+each question is answered in a fresh conversation there was nothing for the
+model to resolve it against. It guessed a repository the policy then denied,
+and the run recorded a refusal where a number was expected. The question now
+names `psf/cachecontrol`. The original wording and the failure it caused are
+kept here on purpose; the fix was to the question, not to the model or the
+tools.
+
+Test counts, measured on this branch's base and tip:
+
+```
+$ git worktree add --detach /tmp/before bec0558 && cd /tmp/before
+$ python seed_books.py && python -m pytest -q -p no:cacheprovider
+137 passed, 2 skipped in 19.56s
+
+$ cd - && python -m pytest -q
+206 passed, 2 skipped in 20.75s
+```
+
+69 new tests. Coverage of the new modules from `python -m pytest -q --cov`:
+
+```
+delivery_metrics.py       94      0   100%
+delivery_tools.py         44      0   100%
+delivery_ingest.py       143     34    76%
+delivery_graphql.py       92     23    75%
+delivery_fixtures.py     105     64    39%
+TOTAL                   1466    233    84%
+```
+
+`delivery_fixtures.py` is low because its recording path talks to the live API
+and is exercised by hand, not by the suite.
+
+## Real model results
+
+Numbers below are from runs against `gpt-4o-mini`. The deterministic eval
+(`--mode tools`) scores 20/20 and is a separate thing: it checks the metrics
+and citations, not the model.
+
+| Run | Scorer | Tool output | Score | Failing |
+|---|---|---|---|---|
+| Run 1, as recorded | original | before | 12 / 20 | not recorded |
+| Run 2, as recorded | original | before | 13 / 20 | q01, q04, q05, q07, q12, q14, q19 |
+| Run 2, re-scored | fixed | before | 13 / 20 | q01, q04, q05, q07, q12, q14, q19 |
+| Run 3, after the tool change | fixed | after | 17 / 20 | q12, q14, q19 |
+| Run 4, after the tool change | fixed | after | 17 / 20 | q12, q14, q19 |
+| Run 5, after the tool change | fixed | after | 17 / 20 | q12, q14, q19 |
+
+Run 2's answers are saved in
+`evals/results/delivery-real-run2-before-fixes.json`. Re-derive the
+re-scored figure with:
+
+```bash
+python evals/run_delivery_eval.py --rescore evals/results/delivery-real-run2-before-fixes.json
+```
+
+Runs 3 to 5 are three separate runs at commit `b1ac32f`, after both the
+scorer fixes and the tool change, saved as
+`evals/results/delivery-real-b1ac32f-run1.json`, `run2.json` and `run3.json`.
+All three scored 17/20 with the same three questions failing. There are no
+source changes between `b1ac32f` and the current tip, so they describe the
+code as it stands.
+
+**The before and after figures are separate and are not combined.** Run 1 and
+run 2 were scored before the tool change, run 2's re-score only changes the
+scorer, and runs 3 to 5 are the only ones with the `summary` field and
+`per_pull_request` removed. **The re-scored figure is not the original one** —
+run 2 as recorded scored 13/20 under the original scorer, and re-scoring it
+under the fixed scorer also gives 13/20.
+
+Scope of every figure here: SQLite, one repository (`psf/cachecontrol`), 12
+pull requests, 8 reviews and 50 workflow runs — a small sample, and 20
+questions asked once per run.
+
+### What the scorer fixes actually changed
+
+Nothing, on run 2. Re-scoring moved no question: 13/20 before and after.
+Of ten individual failure reasons, one was resolved — q12's answer ended
+"is 3.5.", and the original rules treated the full stop as part of the number.
+q12 still fails because the answer never states the total. Every other failure
+had a cause the rules were right to flag.
+
+The scorer defects were real and are fixed with tests, but on this run they
+were not what cost the points.
+
+### Which failures were what
+
+**Fixed by the tool change** — these failed in run 2 and pass in all of runs
+3 to 5:
+
+- **q07** asked for the median reviews per pull request. The metric computed
+  `0.0`; the run 2 answer said `0.5`, which is the median of twelve values if
+  you count six zeros instead of seven — the model had recomputed the
+  statistic from `per_pull_request` instead of quoting the one it was given.
+  With that key no longer sent and a `summary` sentence in its place, all
+  three later runs answer `0.0` and cite the sample of 12.
+- **q01 and q05** stated the figure correctly in run 2 but never stated the
+  sample size the question's rules also require. The `summary` sentence
+  carries the sample size, and both pass in runs 3 to 5.
+
+**Model behaviour** — still failing in all of runs 3 to 5:
+
+- **q12** asks how many pull requests are merged per week. The answer, in all
+  three runs, is "On average, 3.5 pull requests are merged per week in the
+  `psf/cachecontrol` repository." The value check passes: 3.5 is correct and
+  is stated. It fails on the second figure the question requires, the total of
+  7 merges, which the answer omits. That is the same class of omission as q01
+  and q05 in run 2 — a figure the rules ask for and the answer leaves out —
+  and it is model behaviour, not a scorer or question defect.
+- **q14** asks how many merges fell in the first week that had any, which
+  needs the week discovered and then used as a window. All three runs answer
+  "There were no merges in the first week of January 2023" — a window the
+  model invented, for a year with no data. Unchanged, and no tool affordance
+  was added for it.
+- **q19** asks for "team velocity", which is not a metric the server has. All
+  three runs report `3.5 merged pull requests per week` as a velocity,
+  presenting the merge-frequency figure under a name the server never
+  offered. That is fabrication rather than a refusal, and broadening the
+  refusal vocabulary does not and should not rescue it. Unchanged.
+
+**Scorer defect** — the answer was acceptable and the rules were wrong:
+
+- **q12** on its "value" check only, in run 2, where the answer ended
+  "is 3.5." and the original rules read the full stop as part of the number.
+  The rest of q12's failure, then and now, is not a scorer defect.
+
+**Question defect** — the question could not be answered as written:
+
+- **q04** named no repository. See the note in the evaluation results section
+  above; the wording is now fixed and the original is recorded there. It
+  passes in runs 3 to 5.
+
+q14 and q19 are left exactly as they were, and no field was added to make
+them easier. They are recorded here as genuine model failures, reproduced
+identically three times.
+
+## Limits
+
+- **One public repository at a time.** The repository is configurable, but the
+  ingest, the metrics and the tools all work on whatever has been ingested, and
+  nothing here handles private repositories or an organisation-wide roll-up.
+- **Read-only throughout.** The ingest only issues GETs, the tools only read
+  the local store, and the GraphQL schema has no mutation to reach.
+- **The metric definitions are simple on purpose** and are not any particular
+  industry definition. Cycle time starts at pull request creation, not at first
+  commit; time to first review ignores review requests and draft status; the
+  failure rate counts runs, not jobs or steps, and treats a cancelled run as
+  neither a success nor a failure. If you need different definitions, the SQL
+  is in one file.
+- **Small samples, so read the sample size.** The committed fixture is 12 pull
+  requests and 50 runs. In that data the cycle time median is 1.54 hours while
+  the mean is 197 hours, because one pull request took 1349 hours. A median
+  over seven rows is a description of seven rows, nothing more.
+- **Not a complete history.** Pull requests are fetched most-recently-updated
+  first and workflow runs most-recent first, both capped. The numbers describe
+  what was ingested, which is why every answer carries its sample size and its
+  source identifiers.
+- **No claims about customers, teams or scale.** This has been run against one
+  public repository's recorded data and nothing else. There is no benchmark
+  here, no comparison between projects, and nothing about how it behaves on a
+  large or busy repository.
+- **SQLite, not Postgres.** The brief allowed either. There is no Postgres
+  server or driver configured in this project, so the delivery tables live in
+  the same SQLite file as the audit log and usage meter. The schema is plain
+  SQL with no SQLite-specific types; the date arithmetic (`julianday`,
+  `strftime`) is the part that would need rewriting to move.
+- **Reviews are counted as submitted**, including `COMMENTED` ones, so
+  `review_count` is review events rather than approvals.

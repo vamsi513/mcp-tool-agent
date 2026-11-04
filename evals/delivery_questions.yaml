@@ -1,0 +1,196 @@
+# Hand-written questions about the ingested delivery data.
+#
+# Each question names the tool call it should resolve to and what the answer
+# must contain. Expected numbers are NOT written here: each `expect` field
+# names a value that tests/independent_metrics.py computes from the recorded
+# fixture in plain Python, with no SQL. If a query is wrong, the eval fails.
+#
+# No ingest is needed first: the runner builds a temporary database from the
+# recorded fixture and removes it afterwards.
+#
+# Run the deterministic form (no model, no network):
+#     python -m pytest tests/test_delivery_eval.py -q
+#     python evals/run_delivery_eval.py
+#
+# Run it through a real model (needs OPENAI_API_KEY):
+#     python evals/run_delivery_eval.py --mode real --model gpt-4o-mini
+
+version: 1
+repo: psf/cachecontrol
+
+questions:
+  - id: q01-cycle-time-median
+    question: What is the median pull request cycle time for psf/cachecontrol?
+    tool: delivery_metric
+    arguments: {repo: psf/cachecontrol, metric: pr_cycle_time}
+    expect:
+      refused: false
+      value: cycle_time_median
+      sample_size: cycle_time_n
+      unit: "hours"
+
+  - id: q02-cycle-time-citations
+    question: Which pull requests were used to compute the cycle time for psf/cachecontrol?
+    tool: delivery_metric
+    arguments: {repo: psf/cachecontrol, metric: pr_cycle_time}
+    expect:
+      refused: false
+      citations: {pull_requests: cycle_time_prs}
+
+  - id: q03-cycle-time-mean
+    question: What is the mean pull request cycle time for psf/cachecontrol?
+    tool: delivery_metric
+    arguments: {repo: psf/cachecontrol, metric: pr_cycle_time}
+    expect:
+      refused: false
+      mean: cycle_time_mean
+
+  - id: q04-how-many-merged
+    # Originally "How many merged pull requests is the cycle time based on?",
+    # which named no repository. Each question is answered in a fresh
+    # conversation, so there was nothing for the model to resolve it against
+    # and it guessed one the policy then denied. That was a defect in the
+    # question, not in the model or the tools.
+    question: >-
+      How many merged pull requests is the cycle time for psf/cachecontrol
+      based on?
+    tool: delivery_metric
+    arguments: {repo: psf/cachecontrol, metric: pr_cycle_time}
+    expect:
+      refused: false
+      sample_size: cycle_time_n
+
+  - id: q05-time-to-first-review
+    question: How long does a pull request wait for its first review in psf/cachecontrol?
+    tool: delivery_metric
+    arguments: {repo: psf/cachecontrol, metric: time_to_first_review}
+    expect:
+      refused: false
+      value: ttfr_median
+      sample_size: ttfr_n
+      unit: "hours"
+
+  - id: q06-time-to-first-review-citations
+    question: Which pull requests had a first review measured in psf/cachecontrol?
+    tool: delivery_metric
+    arguments: {repo: psf/cachecontrol, metric: time_to_first_review}
+    expect:
+      refused: false
+      citations: {pull_requests: ttfr_prs}
+
+  - id: q07-review-count-median
+    question: What is the median number of reviews per pull request in psf/cachecontrol?
+    tool: delivery_metric
+    arguments: {repo: psf/cachecontrol, metric: review_count}
+    expect:
+      refused: false
+      value: review_count_median
+      sample_size: review_count_n
+
+  - id: q08-review-count-mean
+    question: On average how many reviews does a pull request get in psf/cachecontrol?
+    tool: delivery_metric
+    arguments: {repo: psf/cachecontrol, metric: review_count}
+    expect:
+      refused: false
+      mean: review_count_mean
+
+  - id: q09-workflow-failure-rate
+    question: What share of workflow runs fail in psf/cachecontrol?
+    tool: delivery_metric
+    arguments: {repo: psf/cachecontrol, metric: workflow_failure_rate}
+    expect:
+      refused: false
+      value: failure_rate
+      unit: "ratio"
+
+  - id: q10-workflow-failure-counts
+    question: How many workflow runs failed out of how many completed in psf/cachecontrol?
+    tool: delivery_metric
+    arguments: {repo: psf/cachecontrol, metric: workflow_failure_rate}
+    expect:
+      refused: false
+      failures: failure_count
+      completed_runs: completed_run_count
+
+  - id: q11-failed-run-citations
+    question: Which workflow runs failed in psf/cachecontrol?
+    tool: delivery_metric
+    arguments: {repo: psf/cachecontrol, metric: workflow_failure_rate}
+    expect:
+      refused: false
+      citations: {failed_runs: failed_run_ids}
+
+  - id: q12-merge-frequency
+    question: How many pull requests are merged per week in psf/cachecontrol?
+    tool: delivery_metric
+    arguments: {repo: psf/cachecontrol, metric: merge_frequency}
+    expect:
+      refused: false
+      value: merges_per_week
+      total_merges: total_merges
+
+  - id: q13-merge-weeks
+    question: Which weeks had merges in psf/cachecontrol, and which pull requests?
+    tool: delivery_metric
+    arguments: {repo: psf/cachecontrol, metric: merge_frequency}
+    expect:
+      refused: false
+      weeks: merge_weeks
+
+  - id: q14-windowed-first-week
+    question: How many merges happened in the first week that had any, in psf/cachecontrol?
+    tool: delivery_metric
+    arguments: {repo: psf/cachecontrol, metric: merge_frequency, since: FIRST_WEEK_START,
+                until: FIRST_WEEK_END}
+    expect:
+      refused: false
+      total_merges: first_week_merge_count
+
+  - id: q15-which-repos
+    question: Which repositories can you report delivery metrics for?
+    tool: list_delivery_repos
+    arguments: {}
+    expect:
+      repos: ingested_repo_names
+
+  - id: q16-pull-request-detail
+    question: Show me the details of the earliest pull request cited in the cycle time.
+    tool: pull_request_detail
+    arguments: {repo: psf/cachecontrol, number: FIRST_CYCLE_TIME_PR}
+    expect:
+      refused: false
+      pull_request_number: first_cycle_time_pr
+
+  - id: q17-refuse-unknown-repo
+    question: What is the pull request cycle time for torvalds/linux?
+    tool: delivery_metric
+    arguments: {repo: torvalds/linux, metric: pr_cycle_time}
+    expect:
+      refused: true
+      reason_contains: "not been ingested"
+
+  - id: q18-refuse-empty-window
+    question: What was the cycle time for psf/cachecontrol during 1990?
+    tool: delivery_metric
+    arguments: {repo: psf/cachecontrol, metric: pr_cycle_time, since: "1990-01-01",
+                until: "1990-12-31"}
+    expect:
+      refused: true
+      reason_contains: "nothing to report"
+
+  - id: q19-refuse-unknown-metric
+    question: What is the team velocity for psf/cachecontrol?
+    tool: delivery_metric
+    arguments: {repo: psf/cachecontrol, metric: velocity}
+    expect:
+      refused: true
+      reason_contains: "unknown metric"
+
+  - id: q20-refuse-unknown-pull-request
+    question: Show me pull request 999999 in psf/cachecontrol.
+    tool: pull_request_detail
+    arguments: {repo: psf/cachecontrol, number: 999999}
+    expect:
+      refused: true
+      reason_contains: "not in the ingested data"

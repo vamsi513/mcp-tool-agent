@@ -108,6 +108,17 @@ class _GuardedTransport(httpx.HTTPTransport):
         self._pool._network_backend = _GuardedBackend()
 
 
+def http_client(**kwargs) -> httpx.Client:
+    """The HTTP client this module uses, in one place.
+
+    Tests swap this function out. Rebinding httpx.Client instead would change
+    a global that other libraries inspect — a client that checks
+    isinstance(x, httpx.Client) raises TypeError once that name is a function
+    rather than a class.
+    """
+    return httpx.Client(**kwargs)
+
+
 @mcp.tool()
 def search_github_repos(username: str, query: str = "", limit: int = 5) -> dict:
     """Search a GitHub user's public repositories.
@@ -130,7 +141,7 @@ def search_github_repos(username: str, query: str = "", limit: int = 5) -> dict:
     next_url = f"{GITHUB_API}/users/{username}/repos"
     params: dict[str, str | int] | None = {"per_page": 100, "sort": "updated", "type": "owner"}
     try:
-        with httpx.Client(timeout=15) as client:
+        with http_client(timeout=15) as client:
             for _ in range(MAX_GITHUB_PAGES):
                 resp = client.get(next_url, headers=headers, params=params)
                 if resp.status_code == 404:
@@ -187,7 +198,7 @@ def fetch_url_text(url: str, max_chars: int = 4000) -> dict:
     headers = {"User-Agent": USER_AGENT}
     current = url
     try:
-        with httpx.Client(
+        with http_client(
             timeout=20, follow_redirects=False, transport=_GuardedTransport()
         ) as client:
             for _ in range(MAX_REDIRECTS + 1):

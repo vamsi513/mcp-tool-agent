@@ -1,0 +1,184 @@
+{
+  "mode": "real",
+  "passed": 13,
+  "total": 20,
+  "results": [
+    {
+      "id": "q01-cycle-time-median",
+      "question": "What is the median pull request cycle time for psf/cachecontrol?",
+      "tool": "delivery_metric",
+      "passed": false,
+      "failures": [
+        "answer does not state the expected sample_size"
+      ],
+      "answer": "The median pull request cycle time for the repository `psf/cachecontrol` is approximately 1.54 hours."
+    },
+    {
+      "id": "q02-cycle-time-citations",
+      "question": "Which pull requests were used to compute the cycle time for psf/cachecontrol?",
+      "tool": "delivery_metric",
+      "passed": true,
+      "failures": [],
+      "answer": "The pull requests used to compute the cycle time for the repository `psf/cachecontrol` are:\n\n- PR #466: 1349.15 hours\n- PR #485: 24.74 hours\n- PR #486: 1.54 hours\n- PR #487: 0.61 hours\n- PR #488: 0.63 hours\n- PR #492: 1.30 hours\n- PR #493: 2.26 hours"
+    },
+    {
+      "id": "q03-cycle-time-mean",
+      "question": "What is the mean pull request cycle time for psf/cachecontrol?",
+      "tool": "delivery_metric",
+      "passed": true,
+      "failures": [],
+      "answer": "The mean pull request cycle time for the repository `psf/cachecontrol` is approximately **197.18 hours**."
+    },
+    {
+      "id": "q04-how-many-merged",
+      "question": "How many merged pull requests is the cycle time based on?",
+      "tool": "delivery_metric",
+      "passed": false,
+      "failures": [
+        "answer does not state the expected sample_size"
+      ],
+      "answer": "I cannot access the specific data for the merged pull requests cycle time due to policy restrictions. You may need to check the repository settings or consult with someone who has the necessary permissions."
+    },
+    {
+      "id": "q05-time-to-first-review",
+      "question": "How long does a pull request wait for its first review in psf/cachecontrol?",
+      "tool": "delivery_metric",
+      "passed": false,
+      "failures": [
+        "answer does not state the expected sample_size"
+      ],
+      "answer": "The average time a pull request waits for its first review in the `psf/cachecontrol` repository is approximately 6.94 hours, with a median time of about 1.54 hours. The minimum wait time recorded is about 0.61 hours, while the maximum is approximately 29.66 hours."
+    },
+    {
+      "id": "q06-time-to-first-review-citations",
+      "question": "Which pull requests had a first review measured in psf/cachecontrol?",
+      "tool": "delivery_metric",
+      "passed": true,
+      "failures": [],
+      "answer": "The following pull requests in the `psf/cachecontrol` repository had a first review measured:\n\n1. **Pull Request #466** - 29.66 hours\n2. **Pull Request #486** - 1.54 hours\n3. **Pull Request #487** - 0.61 hours\n4. **Pull Request #488** - 0.63 hours\n5. **Pull Request #493** - 2.26 hours"
+    },
+    {
+      "id": "q07-review-count-median",
+      "question": "What is the median number of reviews per pull request in psf/cachecontrol?",
+      "tool": "delivery_metric",
+      "passed": false,
+      "failures": [
+        "answer does not state the expected value",
+        "answer does not state the expected sample_size"
+      ],
+      "answer": "The median number of reviews per pull request in the `psf/cachecontrol` repository is 0.5."
+    },
+    {
+      "id": "q08-review-count-mean",
+      "question": "On average how many reviews does a pull request get in psf/cachecontrol?",
+      "tool": "delivery_metric",
+      "passed": true,
+      "failures": [],
+      "answer": "On average, pull requests in the `psf/cachecontrol` repository receive approximately 0.67 reviews per pull request."
+    },
+    {
+      "id": "q09-workflow-failure-rate",
+      "question": "What share of workflow runs fail in psf/cachecontrol?",
+      "tool": "delivery_metric",
+      "passed": true,
+      "failures": [],
+      "answer": "The share of workflow runs that fail in the `psf/cachecontrol` repository is approximately 16.67%. Out of 48 completed runs, 8 resulted in failure."
+    },
+    {
+      "id": "q10-workflow-failure-counts",
+      "question": "How many workflow runs failed out of how many completed in psf/cachecontrol?",
+      "tool": "delivery_metric",
+      "passed": true,
+      "failures": [],
+      "answer": "In the `psf/cachecontrol` repository, there were 8 failed workflow runs out of a total of 48 completed runs."
+    },
+    {
+      "id": "q11-failed-run-citations",
+      "question": "Which workflow runs failed in psf/cachecontrol?",
+      "tool": "delivery_metric",
+      "passed": true,
+      "failures": [],
+      "answer": "In the `psf/cachecontrol` repository, there were 8 workflow runs that failed. The IDs of the failed runs are:\n\n- 40608534910\n- 40608535200\n- 41104721320\n- 41127168935\n- 41644776724\n- 41644776727\n- 41701515744\n- 41701515747"
+    },
+    {
+      "id": "q12-merge-frequency",
+      "question": "How many pull requests are merged per week in psf/cachecontrol?",
+      "tool": "delivery_metric",
+      "passed": false,
+      "failures": [
+        "answer does not state the expected value",
+        "answer does not state the expected total_merges"
+      ],
+      "answer": "The average number of pull requests merged per week in the `psf/cachecontrol` repository is 3.5."
+    },
+    {
+      "id": "q13-merge-weeks",
+      "question": "Which weeks had merges in psf/cachecontrol, and which pull requests?",
+      "tool": "delivery_metric",
+      "passed": true,
+      "failures": [],
+      "answer": "In the repository `psf/cachecontrol`, merges occurred in the following weeks:\n\n1. **Week starting on October 19, 2026**\n   - Merges: 5\n   - Pull Requests: [466, 485, 486, 487, 488]\n\n2. **Week starting on October 26, 2026**\n   - Merges: 2\n   - Pull Requests: [492, 493]\n\nIn total, there were 7 merges across these weeks."
+    },
+    {
+      "id": "q14-windowed-first-week",
+      "question": "How many merges happened in the first week that had any, in psf/cachecontrol?",
+      "tool": "delivery_metric",
+      "passed": false,
+      "failures": [
+        "answer does not state the expected total_merges"
+      ],
+      "answer": "There were no merges in the first week of January 2023 for the repository `psf/cachecontrol`."
+    },
+    {
+      "id": "q15-which-repos",
+      "question": "Which repositories can you report delivery metrics for?",
+      "tool": "list_delivery_repos",
+      "passed": true,
+      "failures": [],
+      "answer": "The repository for which delivery metrics can be reported is:\n\n- **Repository**: psf/cachecontrol\n\nAvailable metrics include:\n- PR Cycle Time\n- Time to First Review\n- Review Count\n- Merge Frequency\n- Workflow Failure Rate"
+    },
+    {
+      "id": "q16-pull-request-detail",
+      "question": "Show me the details of the earliest pull request cited in the cycle time.",
+      "tool": "pull_request_detail",
+      "passed": true,
+      "failures": [],
+      "answer": "I cannot access the delivery metrics for the specified repository due to permission restrictions. Please check the repository settings or provide a different repository name."
+    },
+    {
+      "id": "q17-refuse-unknown-repo",
+      "question": "What is the pull request cycle time for torvalds/linux?",
+      "tool": "delivery_metric",
+      "passed": true,
+      "failures": [],
+      "answer": "I cannot access the pull request cycle time for the repository \"torvalds/linux\" due to policy restrictions."
+    },
+    {
+      "id": "q18-refuse-empty-window",
+      "question": "What was the cycle time for psf/cachecontrol during 1990?",
+      "tool": "delivery_metric",
+      "passed": true,
+      "failures": [],
+      "answer": "There is no data available for the pull request cycle time for the repository \"psf/cachecontrol\" during the year 1990, as there were no merged pull requests in that time frame."
+    },
+    {
+      "id": "q19-refuse-unknown-metric",
+      "question": "What is the team velocity for psf/cachecontrol?",
+      "tool": "delivery_metric",
+      "passed": false,
+      "failures": [
+        "expected the answer to refuse, it did not",
+        "a refusal quoted the merges_per_week figure anyway"
+      ],
+      "answer": "The team velocity for the `psf/cachecontrol` repository is approximately 3.5 merged pull requests per week."
+    },
+    {
+      "id": "q20-refuse-unknown-pull-request",
+      "question": "Show me pull request 999999 in psf/cachecontrol.",
+      "tool": "pull_request_detail",
+      "passed": true,
+      "failures": [],
+      "answer": "Pull request 999999 is not available in the ingested data for the repository `psf/cachecontrol`."
+    }
+  ]
+}

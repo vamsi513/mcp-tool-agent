@@ -723,12 +723,14 @@ Numbers below are from runs against `gpt-4o-mini`. The deterministic eval
 (`--mode tools`) scores 20/20 and is a separate thing: it checks the metrics
 and citations, not the model.
 
-| Run | Scorer | Score |
-|---|---|---|
-| Run 1, as recorded | original | 12 / 20 |
-| Run 2, as recorded | original | 13 / 20 |
-| Run 2, re-scored | fixed | 13 / 20 |
-| Run 3 onwards, after the tool change | fixed | not yet run |
+| Run | Scorer | Tool output | Score | Failing |
+|---|---|---|---|---|
+| Run 1, as recorded | original | before | 12 / 20 | not recorded |
+| Run 2, as recorded | original | before | 13 / 20 | q01, q04, q05, q07, q12, q14, q19 |
+| Run 2, re-scored | fixed | before | 13 / 20 | q01, q04, q05, q07, q12, q14, q19 |
+| Run 3, after the tool change | fixed | after | 17 / 20 | q12, q14, q19 |
+| Run 4, after the tool change | fixed | after | 17 / 20 | q12, q14, q19 |
+| Run 5, after the tool change | fixed | after | 17 / 20 | q12, q14, q19 |
 
 Run 2's answers are saved in
 `evals/results/delivery-real-run2-before-fixes.json`. Re-derive the
@@ -738,15 +740,27 @@ re-scored figure with:
 python evals/run_delivery_eval.py --rescore evals/results/delivery-real-run2-before-fixes.json
 ```
 
-The last row is a placeholder. The `summary` field and the removal of
-`per_pull_request` landed after run 2, so no recorded run reflects them; that
-row stays empty until a fresh run is done. **The re-scored figure is not the
-original one** — run 2 as recorded scored 13/20 under the original scorer, and
-re-scoring it under the fixed scorer also gives 13/20.
+Runs 3 to 5 are three separate runs at commit `b1ac32f`, after both the
+scorer fixes and the tool change, saved as
+`evals/results/delivery-real-b1ac32f-run1.json`, `run2.json` and `run3.json`.
+All three scored 17/20 with the same three questions failing. There are no
+source changes between `b1ac32f` and the current tip, so they describe the
+code as it stands.
+
+**The before and after figures are separate and are not combined.** Run 1 and
+run 2 were scored before the tool change, run 2's re-score only changes the
+scorer, and runs 3 to 5 are the only ones with the `summary` field and
+`per_pull_request` removed. **The re-scored figure is not the original one** —
+run 2 as recorded scored 13/20 under the original scorer, and re-scoring it
+under the fixed scorer also gives 13/20.
+
+Scope of every figure here: SQLite, one repository (`psf/cachecontrol`), 12
+pull requests, 8 reviews and 50 workflow runs — a small sample, and 20
+questions asked once per run.
 
 ### What the scorer fixes actually changed
 
-Nothing, on this run. Re-scoring moved no question: 13/20 before and after.
+Nothing, on run 2. Re-scoring moved no question: 13/20 before and after.
 Of ten individual failure reasons, one was resolved — q12's answer ended
 "is 3.5.", and the original rules treated the full stop as part of the number.
 q12 still fails because the answer never states the total. Every other failure
@@ -757,37 +771,54 @@ were not what cost the points.
 
 ### Which failures were what
 
-**Model behaviour** — the answer is wrong or does not do the task:
+**Fixed by the tool change** — these failed in run 2 and pass in all of runs
+3 to 5:
 
 - **q07** asked for the median reviews per pull request. The metric computed
-  `0.0`; the answer said `0.5`. That is the median you get from twelve values
-  if you count six zeros instead of seven, so the model recomputed the
-  statistic from the per-row values rather than quoting the one it was given.
-  This is what motivated the `summary` field and dropping `per_pull_request`,
-  but the run itself is a model failure.
-- **q14** asked how many merges fell in the first week that had any. It needs
-  the week discovered and then used as a window. The answer was "no merges in
-  the first week of January 2023" — a window the model invented, for a year
-  with no data. No tool affordance was added for this.
-- **q19** asked for "team velocity", which is not a metric the server has.
-  The answer reported `3.5 merged pull requests per week`, presenting the
-  merge-frequency figure as a velocity. That is fabrication, not a refusal,
-  and broadening the refusal vocabulary does not and should not rescue it.
-- **q01 and q05** stated the figure correctly but never stated the sample
-  size the question's rules also require.
+  `0.0`; the run 2 answer said `0.5`, which is the median of twelve values if
+  you count six zeros instead of seven — the model had recomputed the
+  statistic from `per_pull_request` instead of quoting the one it was given.
+  With that key no longer sent and a `summary` sentence in its place, all
+  three later runs answer `0.0` and cite the sample of 12.
+- **q01 and q05** stated the figure correctly in run 2 but never stated the
+  sample size the question's rules also require. The `summary` sentence
+  carries the sample size, and both pass in runs 3 to 5.
+
+**Model behaviour** — still failing in all of runs 3 to 5:
+
+- **q12** asks how many pull requests are merged per week. The answer, in all
+  three runs, is "On average, 3.5 pull requests are merged per week in the
+  `psf/cachecontrol` repository." The value check passes: 3.5 is correct and
+  is stated. It fails on the second figure the question requires, the total of
+  7 merges, which the answer omits. That is the same class of omission as q01
+  and q05 in run 2 — a figure the rules ask for and the answer leaves out —
+  and it is model behaviour, not a scorer or question defect.
+- **q14** asks how many merges fell in the first week that had any, which
+  needs the week discovered and then used as a window. All three runs answer
+  "There were no merges in the first week of January 2023" — a window the
+  model invented, for a year with no data. Unchanged, and no tool affordance
+  was added for it.
+- **q19** asks for "team velocity", which is not a metric the server has. All
+  three runs report `3.5 merged pull requests per week` as a velocity,
+  presenting the merge-frequency figure under a name the server never
+  offered. That is fabrication rather than a refusal, and broadening the
+  refusal vocabulary does not and should not rescue it. Unchanged.
 
 **Scorer defect** — the answer was acceptable and the rules were wrong:
 
-- **q12** on its "value" check only, as above. The rest of q12's failure is
-  not a scorer defect.
+- **q12** on its "value" check only, in run 2, where the answer ended
+  "is 3.5." and the original rules read the full stop as part of the number.
+  The rest of q12's failure, then and now, is not a scorer defect.
 
 **Question defect** — the question could not be answered as written:
 
 - **q04** named no repository. See the note in the evaluation results section
-  above; the wording is now fixed and the original is recorded there.
+  above; the wording is now fixed and the original is recorded there. It
+  passes in runs 3 to 5.
 
 q14 and q19 are left exactly as they were, and no field was added to make
-them easier. They are recorded here as genuine model failures.
+them easier. They are recorded here as genuine model failures, reproduced
+identically three times.
 
 ## Limits
 

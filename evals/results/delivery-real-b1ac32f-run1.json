@@ -1,0 +1,944 @@
+{
+  "mode": "real",
+  "passed": 17,
+  "total": 20,
+  "results": [
+    {
+      "id": "q01-cycle-time-median",
+      "question": "What is the median pull request cycle time for psf/cachecontrol?",
+      "tool": "delivery_metric",
+      "passed": true,
+      "failures": [],
+      "answer": "The median pull request cycle time for the repository `psf/cachecontrol` is 1.5422 hours, based on a sample of 7 pull requests.",
+      "trace": [
+        {
+          "tool": "delivery_metric",
+          "arguments": "{\"repo\":\"psf/cachecontrol\",\"metric\":\"pr_cycle_time\"}",
+          "result": "{\n  \"repo\": \"psf/cachecontrol\",\n  \"metric\": \"pr_cycle_time\",\n  \"definition\": \"Hours from pull request creation to merge, over merged pull requests whose merge falls in the window. Unmerged pull requests are excluded.\",\n  \"unit\": \"hours\",\n  \"window\": {\n    \"since\": null,\n    \"until\": null\n  },\n  \"sample_size\": 7,\n  \"value\": 1.5422,\n  \"mean\": 197.178,\n  \"min\": 0.6147,\n  \"max\": 1349.1542,\n  \"statistic\": \"median\",\n  \"summary\": \"the median pr_cycle_time is 1.5422 hours, over a sample of 7 pull requests\",\n  \"citations\": {\n    \"pull_requests\": [\n      466,\n      485,\n      486,\n      487,\n      488,\n      492,\n      493\n    ]\n  },\n  \"refused\": false\n}"
+        }
+      ],
+      "audit": [
+        {
+          "id": 1,
+          "ts": "2026-11-04T00:42:32.068+00:00",
+          "user": "bob",
+          "role": "reader",
+          "tool": "delivery_metric",
+          "arguments": {
+            "metric": "pr_cycle_time",
+            "repo": "psf/cachecontrol",
+            "since": "",
+            "until": ""
+          },
+          "decision": "allow",
+          "reason": "",
+          "outcome": "ok",
+          "duration_ms": 6.541
+        }
+      ]
+    },
+    {
+      "id": "q02-cycle-time-citations",
+      "question": "Which pull requests were used to compute the cycle time for psf/cachecontrol?",
+      "tool": "delivery_metric",
+      "passed": true,
+      "failures": [],
+      "answer": "The pull requests used to compute the cycle time for the `psf/cachecontrol` repository are as follows:\n\n1. **PR #466**: \"don't lower case-sensitive user info embedded in URLs\"\n   - Author: ogalland-tob\n   - Created At: 2026-08-28\n   - Merged At: 2026-10-23\n   - Reviews: 4 (1 Approved)\n\n2. **PR #485**: \"build(deps): bump the actions group across 1 directory with 2 updates\"\n   - Author: dependabot[bot]\n   - Created At: 2026-10-22\n   - Merged At: 2026-10-23\n   - Reviews: 0\n\n3. **PR #486**: \"build(deps): bump certifi from 2025.10.5 to 2026.10.19\"\n   - Author: dependabot[bot]\n   - Created At: 2026-10-23\n   - Merged At: 2026-10-23\n   - Reviews: 1 (1 Approved)\n\n4. **PR #487**: \"Allow uv_build 0.13.x\"\n   - Author: jelly\n   - Created At: 2026-10-25\n   - Merged At: 2026-10-25\n   - Reviews: 1 (1 Approved)\n\n5. **PR #488**: \"build(deps): bump setuptools from 83.0.0 to 84.1.0\"\n   - Author: dependabot[bot]\n   - Created At: 2026-10-25\n   - Merged At: 2026-10-25\n   - Reviews: 1 (1 Approved)\n\n6. **PR #492**: \"build(deps): bump the actions group across 1 directory with 3 updates\"\n   - Author: dependabot[bot]\n   - Created At: 2026-10-30\n   - Merged At: 2026-10-30\n   - Reviews: 0\n\n7. **PR #493**: \"build(deps): bump msgpack from 1.2.1 to 1.2.3\"\n   - Author: dependabot[bot]\n   - Created At: 2026-10-30\n   - Merged At: 2026-10-30\n   - Reviews: 1 (1 Approved)\n\nThe median cycle time for these pull requests is approximately 1.54 hours, based on a sample size of 7.",
+      "trace": [
+        {
+          "tool": "delivery_metric",
+          "arguments": "{\"repo\":\"psf/cachecontrol\",\"metric\":\"pr_cycle_time\"}",
+          "result": "{\n  \"repo\": \"psf/cachecontrol\",\n  \"metric\": \"pr_cycle_time\",\n  \"definition\": \"Hours from pull request creation to merge, over merged pull requests whose merge falls in the window. Unmerged pull requests are excluded.\",\n  \"unit\": \"hours\",\n  \"window\": {\n    \"since\": null,\n    \"until\": null\n  },\n  \"sample_size\": 7,\n  \"value\": 1.5422,\n  \"mean\": 197.178,\n  \"min\": 0.6147,\n  \"max\": 1349.1542,\n  \"statistic\": \"median\",\n  \"summary\": \"the median pr_cycle_time is 1.5422 hours, over a sample of 7 pull requests\",\n  \"citations\": {\n    \"pull_requests\": [\n      466,\n      485,\n      486,\n      487,\n      488,\n      492,\n      493\n    ]\n  },\n  \"refused\": false\n}"
+        },
+        {
+          "tool": "pull_request_detail",
+          "arguments": "{\"repo\": \"psf/cachecontrol\", \"number\": 466}",
+          "result": "{\n  \"refused\": false,\n  \"repo\": \"psf/cachecontrol\",\n  \"pull_request\": {\n    \"number\": 466,\n    \"title\": \"don't lower case-sensitive user info embedded in URLs\",\n    \"state\": \"closed\",\n    \"author\": \"ogalland-tob\",\n    \"created_at\": \"2026-08-28T12:28:39Z\",\n    \"merged_at\": \"2026-10-23T17:37:54Z\",\n    \"closed_at\": \"2026-10-23T17:37:54Z\"\n  },\n  \"review_count\": 4,\n  \"reviews\": [\n    {\n      \"review_id\": 5058803245,\n      \"reviewer\": \"woodruffw\",\n      \"state\": \"COMMENTED\",\n      \"submitted_at\": \"2026-08-29T18:08:01Z\"\n    },\n    {\n      \"review_id\": 5066200708,\n      \"reviewer\": \"ogalland-tob\",\n      \"state\": \"COMMENTED\",\n      \"submitted_at\": \"2026-08-31T12:03:53Z\"\n    },\n    {\n      \"review_id\": 5066606456,\n      \"reviewer\": \"ogalland-tob\",\n      \"state\": \"COMMENTED\",\n      \"submitted_at\": \"2026-08-31T12:44:52Z\"\n    },\n    {\n      \"review_id\": 5181906676,\n      \"reviewer\": \"woodruffw\",\n      \"state\": \"APPROVED\",\n      \"submitted_at\": \"2026-09-11T17:54:06Z\"\n    }\n  ]\n}"
+        },
+        {
+          "tool": "pull_request_detail",
+          "arguments": "{\"repo\": \"psf/cachecontrol\", \"number\": 485}",
+          "result": "{\n  \"refused\": false,\n  \"repo\": \"psf/cachecontrol\",\n  \"pull_request\": {\n    \"number\": 485,\n    \"title\": \"build(deps): bump the actions group across 1 directory with 2 updates\",\n    \"state\": \"closed\",\n    \"author\": \"dependabot[bot]\",\n    \"created_at\": \"2026-10-22T16:53:00Z\",\n    \"merged_at\": \"2026-10-23T17:37:27Z\",\n    \"closed_at\": \"2026-10-23T17:37:27Z\"\n  },\n  \"review_count\": 0,\n  \"reviews\": []\n}"
+        },
+        {
+          "tool": "pull_request_detail",
+          "arguments": "{\"repo\": \"psf/cachecontrol\", \"number\": 486}",
+          "result": "{\n  \"refused\": false,\n  \"repo\": \"psf/cachecontrol\",\n  \"pull_request\": {\n    \"number\": 486,\n    \"title\": \"build(deps): bump certifi from 2025.10.5 to 2026.10.19\",\n    \"state\": \"closed\",\n    \"author\": \"dependabot[bot]\",\n    \"created_at\": \"2026-10-23T18:42:45Z\",\n    \"merged_at\": \"2026-10-23T20:15:17Z\",\n    \"closed_at\": \"2026-10-23T20:15:17Z\"\n  },\n  \"review_count\": 1,\n  \"reviews\": [\n    {\n      \"review_id\": 5633924691,\n      \"reviewer\": \"woodruffw\",\n      \"state\": \"APPROVED\",\n      \"submitted_at\": \"2026-10-23T20:15:13Z\"\n    }\n  ]\n}"
+        },
+        {
+          "tool": "pull_request_detail",
+          "arguments": "{\"repo\": \"psf/cachecontrol\", \"number\": 487}",
+          "result": "{\n  \"refused\": false,\n  \"repo\": \"psf/cachecontrol\",\n  \"pull_request\": {\n    \"number\": 487,\n    \"title\": \"Allow uv_build 0.13.x\",\n    \"state\": \"closed\",\n    \"author\": \"jelly\",\n    \"created_at\": \"2026-10-25T14:47:06Z\",\n    \"merged_at\": \"2026-10-25T15:23:59Z\",\n    \"closed_at\": \"2026-10-25T15:23:59Z\"\n  },\n  \"review_count\": 1,\n  \"reviews\": [\n    {\n      \"review_id\": 5643849997,\n      \"reviewer\": \"woodruffw\",\n      \"state\": \"APPROVED\",\n      \"submitted_at\": \"2026-10-25T15:23:53Z\"\n    }\n  ]\n}"
+        },
+        {
+          "tool": "pull_request_detail",
+          "arguments": "{\"repo\": \"psf/cachecontrol\", \"number\": 488}",
+          "result": "{\n  \"refused\": false,\n  \"repo\": \"psf/cachecontrol\",\n  \"pull_request\": {\n    \"number\": 488,\n    \"title\": \"build(deps): bump setuptools from 83.0.0 to 84.1.0\",\n    \"state\": \"closed\",\n    \"author\": \"dependabot[bot]\",\n    \"created_at\": \"2026-10-25T15:26:24Z\",\n    \"merged_at\": \"2026-10-25T16:04:08Z\",\n    \"closed_at\": \"2026-10-25T16:04:08Z\"\n  },\n  \"review_count\": 1,\n  \"reviews\": [\n    {\n      \"review_id\": 5644053848,\n      \"reviewer\": \"woodruffw\",\n      \"state\": \"APPROVED\",\n      \"submitted_at\": \"2026-10-25T16:04:04Z\"\n    }\n  ]\n}"
+        },
+        {
+          "tool": "pull_request_detail",
+          "arguments": "{\"repo\": \"psf/cachecontrol\", \"number\": 492}",
+          "result": "{\n  \"refused\": false,\n  \"repo\": \"psf/cachecontrol\",\n  \"pull_request\": {\n    \"number\": 492,\n    \"title\": \"build(deps): bump the actions group across 1 directory with 3 updates\",\n    \"state\": \"closed\",\n    \"author\": \"dependabot[bot]\",\n    \"created_at\": \"2026-10-30T16:53:01Z\",\n    \"merged_at\": \"2026-10-30T18:11:10Z\",\n    \"closed_at\": \"2026-10-30T18:11:10Z\"\n  },\n  \"review_count\": 0,\n  \"reviews\": []\n}"
+        },
+        {
+          "tool": "pull_request_detail",
+          "arguments": "{\"repo\": \"psf/cachecontrol\", \"number\": 493}",
+          "result": "{\n  \"refused\": false,\n  \"repo\": \"psf/cachecontrol\",\n  \"pull_request\": {\n    \"number\": 493,\n    \"title\": \"build(deps): bump msgpack from 1.2.1 to 1.2.3\",\n    \"state\": \"closed\",\n    \"author\": \"dependabot[bot]\",\n    \"created_at\": \"2026-10-30T18:12:28Z\",\n    \"merged_at\": \"2026-10-30T20:28:13Z\",\n    \"closed_at\": \"2026-10-30T20:28:13Z\"\n  },\n  \"review_count\": 1,\n  \"reviews\": [\n    {\n      \"review_id\": 5718272500,\n      \"reviewer\": \"woodruffw\",\n      \"state\": \"APPROVED\",\n      \"submitted_at\": \"2026-10-30T20:28:09Z\"\n    }\n  ]\n}"
+        }
+      ],
+      "audit": [
+        {
+          "id": 2,
+          "ts": "2026-11-04T00:42:34.167+00:00",
+          "user": "bob",
+          "role": "reader",
+          "tool": "delivery_metric",
+          "arguments": {
+            "metric": "pr_cycle_time",
+            "repo": "psf/cachecontrol",
+            "since": "",
+            "until": ""
+          },
+          "decision": "allow",
+          "reason": "",
+          "outcome": "ok",
+          "duration_ms": 7.125
+        },
+        {
+          "id": 3,
+          "ts": "2026-11-04T00:42:36.257+00:00",
+          "user": "bob",
+          "role": "reader",
+          "tool": "pull_request_detail",
+          "arguments": {
+            "number": 466,
+            "repo": "psf/cachecontrol"
+          },
+          "decision": "allow",
+          "reason": "",
+          "outcome": "ok",
+          "duration_ms": 5.285
+        },
+        {
+          "id": 4,
+          "ts": "2026-11-04T00:42:36.270+00:00",
+          "user": "bob",
+          "role": "reader",
+          "tool": "pull_request_detail",
+          "arguments": {
+            "number": 485,
+            "repo": "psf/cachecontrol"
+          },
+          "decision": "allow",
+          "reason": "",
+          "outcome": "ok",
+          "duration_ms": 3.694
+        },
+        {
+          "id": 5,
+          "ts": "2026-11-04T00:42:36.280+00:00",
+          "user": "bob",
+          "role": "reader",
+          "tool": "pull_request_detail",
+          "arguments": {
+            "number": 486,
+            "repo": "psf/cachecontrol"
+          },
+          "decision": "allow",
+          "reason": "",
+          "outcome": "ok",
+          "duration_ms": 3.474
+        },
+        {
+          "id": 6,
+          "ts": "2026-11-04T00:42:36.288+00:00",
+          "user": "bob",
+          "role": "reader",
+          "tool": "pull_request_detail",
+          "arguments": {
+            "number": 487,
+            "repo": "psf/cachecontrol"
+          },
+          "decision": "allow",
+          "reason": "",
+          "outcome": "ok",
+          "duration_ms": 2.193
+        },
+        {
+          "id": 7,
+          "ts": "2026-11-04T00:42:36.294+00:00",
+          "user": "bob",
+          "role": "reader",
+          "tool": "pull_request_detail",
+          "arguments": {
+            "number": 488,
+            "repo": "psf/cachecontrol"
+          },
+          "decision": "allow",
+          "reason": "",
+          "outcome": "ok",
+          "duration_ms": 2.277
+        },
+        {
+          "id": 8,
+          "ts": "2026-11-04T00:42:36.300+00:00",
+          "user": "bob",
+          "role": "reader",
+          "tool": "pull_request_detail",
+          "arguments": {
+            "number": 492,
+            "repo": "psf/cachecontrol"
+          },
+          "decision": "allow",
+          "reason": "",
+          "outcome": "ok",
+          "duration_ms": 2.216
+        },
+        {
+          "id": 9,
+          "ts": "2026-11-04T00:42:36.306+00:00",
+          "user": "bob",
+          "role": "reader",
+          "tool": "pull_request_detail",
+          "arguments": {
+            "number": 493,
+            "repo": "psf/cachecontrol"
+          },
+          "decision": "allow",
+          "reason": "",
+          "outcome": "ok",
+          "duration_ms": 2.36
+        }
+      ]
+    },
+    {
+      "id": "q03-cycle-time-mean",
+      "question": "What is the mean pull request cycle time for psf/cachecontrol?",
+      "tool": "delivery_metric",
+      "passed": true,
+      "failures": [],
+      "answer": "The mean pull request cycle time for the repository `psf/cachecontrol` is approximately 197.18 hours, based on a sample of 7 merged pull requests.",
+      "trace": [
+        {
+          "tool": "delivery_metric",
+          "arguments": "{\"repo\":\"psf/cachecontrol\",\"metric\":\"pr_cycle_time\"}",
+          "result": "{\n  \"repo\": \"psf/cachecontrol\",\n  \"metric\": \"pr_cycle_time\",\n  \"definition\": \"Hours from pull request creation to merge, over merged pull requests whose merge falls in the window. Unmerged pull requests are excluded.\",\n  \"unit\": \"hours\",\n  \"window\": {\n    \"since\": null,\n    \"until\": null\n  },\n  \"sample_size\": 7,\n  \"value\": 1.5422,\n  \"mean\": 197.178,\n  \"min\": 0.6147,\n  \"max\": 1349.1542,\n  \"statistic\": \"median\",\n  \"summary\": \"the median pr_cycle_time is 1.5422 hours, over a sample of 7 pull requests\",\n  \"citations\": {\n    \"pull_requests\": [\n      466,\n      485,\n      486,\n      487,\n      488,\n      492,\n      493\n    ]\n  },\n  \"refused\": false\n}"
+        }
+      ],
+      "audit": [
+        {
+          "id": 10,
+          "ts": "2026-11-04T00:42:42.748+00:00",
+          "user": "bob",
+          "role": "reader",
+          "tool": "delivery_metric",
+          "arguments": {
+            "metric": "pr_cycle_time",
+            "repo": "psf/cachecontrol",
+            "since": "",
+            "until": ""
+          },
+          "decision": "allow",
+          "reason": "",
+          "outcome": "ok",
+          "duration_ms": 9.59
+        }
+      ]
+    },
+    {
+      "id": "q04-how-many-merged",
+      "question": "How many merged pull requests is the cycle time for psf/cachecontrol based on?",
+      "tool": "delivery_metric",
+      "passed": true,
+      "failures": [],
+      "answer": "The cycle time for merged pull requests in the `psf/cachecontrol` repository is based on a sample of 7 pull requests.",
+      "trace": [
+        {
+          "tool": "delivery_metric",
+          "arguments": "{\"repo\":\"psf/cachecontrol\",\"metric\":\"pr_cycle_time\"}",
+          "result": "{\n  \"repo\": \"psf/cachecontrol\",\n  \"metric\": \"pr_cycle_time\",\n  \"definition\": \"Hours from pull request creation to merge, over merged pull requests whose merge falls in the window. Unmerged pull requests are excluded.\",\n  \"unit\": \"hours\",\n  \"window\": {\n    \"since\": null,\n    \"until\": null\n  },\n  \"sample_size\": 7,\n  \"value\": 1.5422,\n  \"mean\": 197.178,\n  \"min\": 0.6147,\n  \"max\": 1349.1542,\n  \"statistic\": \"median\",\n  \"summary\": \"the median pr_cycle_time is 1.5422 hours, over a sample of 7 pull requests\",\n  \"citations\": {\n    \"pull_requests\": [\n      466,\n      485,\n      486,\n      487,\n      488,\n      492,\n      493\n    ]\n  },\n  \"refused\": false\n}"
+        }
+      ],
+      "audit": [
+        {
+          "id": 11,
+          "ts": "2026-11-04T00:42:44.521+00:00",
+          "user": "bob",
+          "role": "reader",
+          "tool": "delivery_metric",
+          "arguments": {
+            "metric": "pr_cycle_time",
+            "repo": "psf/cachecontrol",
+            "since": "",
+            "until": ""
+          },
+          "decision": "allow",
+          "reason": "",
+          "outcome": "ok",
+          "duration_ms": 8.174
+        }
+      ]
+    },
+    {
+      "id": "q05-time-to-first-review",
+      "question": "How long does a pull request wait for its first review in psf/cachecontrol?",
+      "tool": "delivery_metric",
+      "passed": true,
+      "failures": [],
+      "answer": "The median time for a pull request in the `psf/cachecontrol` repository to wait for its first review is approximately 1.54 hours, based on a sample of 5 pull requests.",
+      "trace": [
+        {
+          "tool": "delivery_metric",
+          "arguments": "{\"repo\":\"psf/cachecontrol\",\"metric\":\"time_to_first_review\"}",
+          "result": "{\n  \"repo\": \"psf/cachecontrol\",\n  \"metric\": \"time_to_first_review\",\n  \"definition\": \"Hours from pull request creation to its earliest submitted review, over pull requests created in the window that received at least one review. Pull requests with no review are excluded.\",\n  \"unit\": \"hours\",\n  \"window\": {\n    \"since\": null,\n    \"until\": null\n  },\n  \"sample_size\": 5,\n  \"value\": 1.5411,\n  \"mean\": 6.9399,\n  \"min\": 0.6131,\n  \"max\": 29.6561,\n  \"statistic\": \"median\",\n  \"summary\": \"the median time_to_first_review is 1.5411 hours, over a sample of 5 pull requests\",\n  \"citations\": {\n    \"pull_requests\": [\n      466,\n      486,\n      487,\n      488,\n      493\n    ]\n  },\n  \"refused\": false\n}"
+        }
+      ],
+      "audit": [
+        {
+          "id": 12,
+          "ts": "2026-11-04T00:42:46.403+00:00",
+          "user": "bob",
+          "role": "reader",
+          "tool": "delivery_metric",
+          "arguments": {
+            "metric": "time_to_first_review",
+            "repo": "psf/cachecontrol",
+            "since": "",
+            "until": ""
+          },
+          "decision": "allow",
+          "reason": "",
+          "outcome": "ok",
+          "duration_ms": 6.904
+        }
+      ]
+    },
+    {
+      "id": "q06-time-to-first-review-citations",
+      "question": "Which pull requests had a first review measured in psf/cachecontrol?",
+      "tool": "delivery_metric",
+      "passed": true,
+      "failures": [],
+      "answer": "Here are the pull requests from the `psf/cachecontrol` repository that had a first review:\n\n1. **PR #466**: \"don't lower case-sensitive user info embedded in URLs\"\n   - Author: ogalland-tob\n   - Created At: 2026-08-28\n   - State: Closed\n   - Review Count: 4\n   - First Review Submitted At: 2026-08-29\n\n2. **PR #486**: \"build(deps): bump certifi from 2025.10.5 to 2026.10.19\"\n   - Author: dependabot[bot]\n   - Created At: 2026-10-23\n   - State: Closed\n   - Review Count: 1\n   - First Review Submitted At: 2026-10-23\n\n3. **PR #487**: \"Allow uv_build 0.13.x\"\n   - Author: jelly\n   - Created At: 2026-10-25\n   - State: Closed\n   - Review Count: 1\n   - First Review Submitted At: 2026-10-25\n\n4. **PR #488**: \"build(deps): bump setuptools from 83.0.0 to 84.1.0\"\n   - Author: dependabot[bot]\n   - Created At: 2026-10-25\n   - State: Closed\n   - Review Count: 1\n   - First Review Submitted At: 2026-10-25\n\n5. **PR #493**: \"build(deps): bump msgpack from 1.2.1 to 1.2.3\"\n   - Author: dependabot[bot]\n   - Created At: 2026-10-30\n   - State: Closed\n   - Review Count: 1\n   - First Review Submitted At: 2026-10-30\n\nThe median time to first review for these pull requests was approximately 1.54 hours.",
+      "trace": [
+        {
+          "tool": "delivery_metric",
+          "arguments": "{\"repo\":\"psf/cachecontrol\",\"metric\":\"time_to_first_review\"}",
+          "result": "{\n  \"repo\": \"psf/cachecontrol\",\n  \"metric\": \"time_to_first_review\",\n  \"definition\": \"Hours from pull request creation to its earliest submitted review, over pull requests created in the window that received at least one review. Pull requests with no review are excluded.\",\n  \"unit\": \"hours\",\n  \"window\": {\n    \"since\": null,\n    \"until\": null\n  },\n  \"sample_size\": 5,\n  \"value\": 1.5411,\n  \"mean\": 6.9399,\n  \"min\": 0.6131,\n  \"max\": 29.6561,\n  \"statistic\": \"median\",\n  \"summary\": \"the median time_to_first_review is 1.5411 hours, over a sample of 5 pull requests\",\n  \"citations\": {\n    \"pull_requests\": [\n      466,\n      486,\n      487,\n      488,\n      493\n    ]\n  },\n  \"refused\": false\n}"
+        },
+        {
+          "tool": "pull_request_detail",
+          "arguments": "{\"repo\": \"psf/cachecontrol\", \"number\": 466}",
+          "result": "{\n  \"refused\": false,\n  \"repo\": \"psf/cachecontrol\",\n  \"pull_request\": {\n    \"number\": 466,\n    \"title\": \"don't lower case-sensitive user info embedded in URLs\",\n    \"state\": \"closed\",\n    \"author\": \"ogalland-tob\",\n    \"created_at\": \"2026-08-28T12:28:39Z\",\n    \"merged_at\": \"2026-10-23T17:37:54Z\",\n    \"closed_at\": \"2026-10-23T17:37:54Z\"\n  },\n  \"review_count\": 4,\n  \"reviews\": [\n    {\n      \"review_id\": 5058803245,\n      \"reviewer\": \"woodruffw\",\n      \"state\": \"COMMENTED\",\n      \"submitted_at\": \"2026-08-29T18:08:01Z\"\n    },\n    {\n      \"review_id\": 5066200708,\n      \"reviewer\": \"ogalland-tob\",\n      \"state\": \"COMMENTED\",\n      \"submitted_at\": \"2026-08-31T12:03:53Z\"\n    },\n    {\n      \"review_id\": 5066606456,\n      \"reviewer\": \"ogalland-tob\",\n      \"state\": \"COMMENTED\",\n      \"submitted_at\": \"2026-08-31T12:44:52Z\"\n    },\n    {\n      \"review_id\": 5181906676,\n      \"reviewer\": \"woodruffw\",\n      \"state\": \"APPROVED\",\n      \"submitted_at\": \"2026-09-11T17:54:06Z\"\n    }\n  ]\n}"
+        },
+        {
+          "tool": "pull_request_detail",
+          "arguments": "{\"repo\": \"psf/cachecontrol\", \"number\": 486}",
+          "result": "{\n  \"refused\": false,\n  \"repo\": \"psf/cachecontrol\",\n  \"pull_request\": {\n    \"number\": 486,\n    \"title\": \"build(deps): bump certifi from 2025.10.5 to 2026.10.19\",\n    \"state\": \"closed\",\n    \"author\": \"dependabot[bot]\",\n    \"created_at\": \"2026-10-23T18:42:45Z\",\n    \"merged_at\": \"2026-10-23T20:15:17Z\",\n    \"closed_at\": \"2026-10-23T20:15:17Z\"\n  },\n  \"review_count\": 1,\n  \"reviews\": [\n    {\n      \"review_id\": 5633924691,\n      \"reviewer\": \"woodruffw\",\n      \"state\": \"APPROVED\",\n      \"submitted_at\": \"2026-10-23T20:15:13Z\"\n    }\n  ]\n}"
+        },
+        {
+          "tool": "pull_request_detail",
+          "arguments": "{\"repo\": \"psf/cachecontrol\", \"number\": 487}",
+          "result": "{\n  \"refused\": false,\n  \"repo\": \"psf/cachecontrol\",\n  \"pull_request\": {\n    \"number\": 487,\n    \"title\": \"Allow uv_build 0.13.x\",\n    \"state\": \"closed\",\n    \"author\": \"jelly\",\n    \"created_at\": \"2026-10-25T14:47:06Z\",\n    \"merged_at\": \"2026-10-25T15:23:59Z\",\n    \"closed_at\": \"2026-10-25T15:23:59Z\"\n  },\n  \"review_count\": 1,\n  \"reviews\": [\n    {\n      \"review_id\": 5643849997,\n      \"reviewer\": \"woodruffw\",\n      \"state\": \"APPROVED\",\n      \"submitted_at\": \"2026-10-25T15:23:53Z\"\n    }\n  ]\n}"
+        },
+        {
+          "tool": "pull_request_detail",
+          "arguments": "{\"repo\": \"psf/cachecontrol\", \"number\": 488}",
+          "result": "{\n  \"refused\": false,\n  \"repo\": \"psf/cachecontrol\",\n  \"pull_request\": {\n    \"number\": 488,\n    \"title\": \"build(deps): bump setuptools from 83.0.0 to 84.1.0\",\n    \"state\": \"closed\",\n    \"author\": \"dependabot[bot]\",\n    \"created_at\": \"2026-10-25T15:26:24Z\",\n    \"merged_at\": \"2026-10-25T16:04:08Z\",\n    \"closed_at\": \"2026-10-25T16:04:08Z\"\n  },\n  \"review_count\": 1,\n  \"reviews\": [\n    {\n      \"review_id\": 5644053848,\n      \"reviewer\": \"woodruffw\",\n      \"state\": \"APPROVED\",\n      \"submitted_at\": \"2026-10-25T16:04:04Z\"\n    }\n  ]\n}"
+        },
+        {
+          "tool": "pull_request_detail",
+          "arguments": "{\"repo\": \"psf/cachecontrol\", \"number\": 493}",
+          "result": "{\n  \"refused\": false,\n  \"repo\": \"psf/cachecontrol\",\n  \"pull_request\": {\n    \"number\": 493,\n    \"title\": \"build(deps): bump msgpack from 1.2.1 to 1.2.3\",\n    \"state\": \"closed\",\n    \"author\": \"dependabot[bot]\",\n    \"created_at\": \"2026-10-30T18:12:28Z\",\n    \"merged_at\": \"2026-10-30T20:28:13Z\",\n    \"closed_at\": \"2026-10-30T20:28:13Z\"\n  },\n  \"review_count\": 1,\n  \"reviews\": [\n    {\n      \"review_id\": 5718272500,\n      \"reviewer\": \"woodruffw\",\n      \"state\": \"APPROVED\",\n      \"submitted_at\": \"2026-10-30T20:28:09Z\"\n    }\n  ]\n}"
+        }
+      ],
+      "audit": [
+        {
+          "id": 13,
+          "ts": "2026-11-04T00:42:48.288+00:00",
+          "user": "bob",
+          "role": "reader",
+          "tool": "delivery_metric",
+          "arguments": {
+            "metric": "time_to_first_review",
+            "repo": "psf/cachecontrol",
+            "since": "",
+            "until": ""
+          },
+          "decision": "allow",
+          "reason": "",
+          "outcome": "ok",
+          "duration_ms": 8.288
+        },
+        {
+          "id": 14,
+          "ts": "2026-11-04T00:42:49.903+00:00",
+          "user": "bob",
+          "role": "reader",
+          "tool": "pull_request_detail",
+          "arguments": {
+            "number": 466,
+            "repo": "psf/cachecontrol"
+          },
+          "decision": "allow",
+          "reason": "",
+          "outcome": "ok",
+          "duration_ms": 5.145
+        },
+        {
+          "id": 15,
+          "ts": "2026-11-04T00:42:49.917+00:00",
+          "user": "bob",
+          "role": "reader",
+          "tool": "pull_request_detail",
+          "arguments": {
+            "number": 486,
+            "repo": "psf/cachecontrol"
+          },
+          "decision": "allow",
+          "reason": "",
+          "outcome": "ok",
+          "duration_ms": 6.593
+        },
+        {
+          "id": 16,
+          "ts": "2026-11-04T00:42:49.923+00:00",
+          "user": "bob",
+          "role": "reader",
+          "tool": "pull_request_detail",
+          "arguments": {
+            "number": 487,
+            "repo": "psf/cachecontrol"
+          },
+          "decision": "allow",
+          "reason": "",
+          "outcome": "ok",
+          "duration_ms": 1.724
+        },
+        {
+          "id": 17,
+          "ts": "2026-11-04T00:42:49.929+00:00",
+          "user": "bob",
+          "role": "reader",
+          "tool": "pull_request_detail",
+          "arguments": {
+            "number": 488,
+            "repo": "psf/cachecontrol"
+          },
+          "decision": "allow",
+          "reason": "",
+          "outcome": "ok",
+          "duration_ms": 2.069
+        },
+        {
+          "id": 18,
+          "ts": "2026-11-04T00:42:49.935+00:00",
+          "user": "bob",
+          "role": "reader",
+          "tool": "pull_request_detail",
+          "arguments": {
+            "number": 493,
+            "repo": "psf/cachecontrol"
+          },
+          "decision": "allow",
+          "reason": "",
+          "outcome": "ok",
+          "duration_ms": 1.638
+        }
+      ]
+    },
+    {
+      "id": "q07-review-count-median",
+      "question": "What is the median number of reviews per pull request in psf/cachecontrol?",
+      "tool": "delivery_metric",
+      "passed": true,
+      "failures": [],
+      "answer": "The median number of reviews per pull request in the `psf/cachecontrol` repository is 0.0 reviews, based on a sample of 12 pull requests.",
+      "trace": [
+        {
+          "tool": "delivery_metric",
+          "arguments": "{\"repo\":\"psf/cachecontrol\",\"metric\":\"review_count\"}",
+          "result": "{\n  \"repo\": \"psf/cachecontrol\",\n  \"metric\": \"review_count\",\n  \"definition\": \"Submitted reviews per pull request, over pull requests created in the window. Pull requests with no reviews count as zero.\",\n  \"unit\": \"reviews per pull request\",\n  \"window\": {\n    \"since\": null,\n    \"until\": null\n  },\n  \"sample_size\": 12,\n  \"value\": 0.0,\n  \"mean\": 0.6667,\n  \"min\": 0.0,\n  \"max\": 4.0,\n  \"statistic\": \"median\",\n  \"summary\": \"the median review_count is 0.0 reviews per pull request, over a sample of 12 pull requests\",\n  \"citations\": {\n    \"pull_requests\": [\n      466,\n      485,\n      486,\n      487,\n      488,\n      489,\n      490,\n      491,\n      492,\n      493,\n      494,\n      495\n    ]\n  },\n  \"refused\": false\n}"
+        }
+      ],
+      "audit": [
+        {
+          "id": 19,
+          "ts": "2026-11-04T00:42:55.365+00:00",
+          "user": "bob",
+          "role": "reader",
+          "tool": "delivery_metric",
+          "arguments": {
+            "metric": "review_count",
+            "repo": "psf/cachecontrol",
+            "since": "",
+            "until": ""
+          },
+          "decision": "allow",
+          "reason": "",
+          "outcome": "ok",
+          "duration_ms": 6.291
+        }
+      ]
+    },
+    {
+      "id": "q08-review-count-mean",
+      "question": "On average how many reviews does a pull request get in psf/cachecontrol?",
+      "tool": "delivery_metric",
+      "passed": true,
+      "failures": [],
+      "answer": "On average, pull requests in the `psf/cachecontrol` repository receive approximately 0.67 reviews per pull request, based on a sample of 12 pull requests.",
+      "trace": [
+        {
+          "tool": "delivery_metric",
+          "arguments": "{\"repo\":\"psf/cachecontrol\",\"metric\":\"review_count\"}",
+          "result": "{\n  \"repo\": \"psf/cachecontrol\",\n  \"metric\": \"review_count\",\n  \"definition\": \"Submitted reviews per pull request, over pull requests created in the window. Pull requests with no reviews count as zero.\",\n  \"unit\": \"reviews per pull request\",\n  \"window\": {\n    \"since\": null,\n    \"until\": null\n  },\n  \"sample_size\": 12,\n  \"value\": 0.0,\n  \"mean\": 0.6667,\n  \"min\": 0.0,\n  \"max\": 4.0,\n  \"statistic\": \"median\",\n  \"summary\": \"the median review_count is 0.0 reviews per pull request, over a sample of 12 pull requests\",\n  \"citations\": {\n    \"pull_requests\": [\n      466,\n      485,\n      486,\n      487,\n      488,\n      489,\n      490,\n      491,\n      492,\n      493,\n      494,\n      495\n    ]\n  },\n  \"refused\": false\n}"
+        }
+      ],
+      "audit": [
+        {
+          "id": 20,
+          "ts": "2026-11-04T00:42:58.757+00:00",
+          "user": "bob",
+          "role": "reader",
+          "tool": "delivery_metric",
+          "arguments": {
+            "metric": "review_count",
+            "repo": "psf/cachecontrol",
+            "since": "",
+            "until": ""
+          },
+          "decision": "allow",
+          "reason": "",
+          "outcome": "ok",
+          "duration_ms": 6.424
+        }
+      ]
+    },
+    {
+      "id": "q09-workflow-failure-rate",
+      "question": "What share of workflow runs fail in psf/cachecontrol?",
+      "tool": "delivery_metric",
+      "passed": true,
+      "failures": [],
+      "answer": "The failure rate of workflow runs in the `psf/cachecontrol` repository is approximately 16.67%, with 8 out of 48 completed workflow runs failing.",
+      "trace": [
+        {
+          "tool": "delivery_metric",
+          "arguments": "{\"repo\":\"psf/cachecontrol\",\"metric\":\"workflow_failure_rate\"}",
+          "result": "{\n  \"repo\": \"psf/cachecontrol\",\n  \"metric\": \"workflow_failure_rate\",\n  \"definition\": \"Share of completed workflow runs created in the window whose conclusion is 'failure'. Runs that are cancelled, skipped or still in progress are excluded from both numerator and denominator.\",\n  \"unit\": \"ratio\",\n  \"window\": {\n    \"since\": null,\n    \"until\": null\n  },\n  \"sample_size\": 48,\n  \"value\": 0.1667,\n  \"failures\": 8,\n  \"completed_runs\": 48,\n  \"summary\": \"8 of 48 completed workflow runs failed, a failure rate of 0.1667\",\n  \"citations\": {\n    \"workflow_runs\": [\n      39817814153,\n      39990308776,\n      39990313654,\n      39996705700,\n      40005393740,\n      40005554941,\n      40005555032,\n      40017787687,\n      40017795446,\n      40203864118,\n      40203864124,\n      40206745735,\n      40206750972,\n      40206845263,\n      40206942120,\n      40206942140,\n      40209908700,\n      40209913947,\n      40363271587,\n      40545120400,\n      40545282321,\n      40545282582,\n      40608534910,\n      40608535200,\n      40730189578,\n      40730194949,\n      40730362266,\n      40730362317,\n      40915774638,\n      40915777735,\n      41093755139,\n      41093761221,\n      41093898328,\n      41093898420,\n      41104695367,\n      41104721320,\n      41104721432,\n      41104902384,\n      41104902461,\n      41123456965,\n      41123463316,\n      41127168935,\n      41485692013,\n      41644776724,\n      41644776727,\n      41678556619,\n      41701515744,\n      41701515747\n    ],\n    \"failed_runs\": [\n      40608534910,\n      40608535200,\n      41104721320,\n      41127168935,\n      41644776724,\n      41644776727,\n      41701515744,\n      41701515747\n    ]\n  },\n  \"refused\": false\n}"
+        }
+      ],
+      "audit": [
+        {
+          "id": 21,
+          "ts": "2026-11-04T00:43:00.560+00:00",
+          "user": "bob",
+          "role": "reader",
+          "tool": "delivery_metric",
+          "arguments": {
+            "metric": "workflow_failure_rate",
+            "repo": "psf/cachecontrol",
+            "since": "",
+            "until": ""
+          },
+          "decision": "allow",
+          "reason": "",
+          "outcome": "ok",
+          "duration_ms": 6.475
+        }
+      ]
+    },
+    {
+      "id": "q10-workflow-failure-counts",
+      "question": "How many workflow runs failed out of how many completed in psf/cachecontrol?",
+      "tool": "delivery_metric",
+      "passed": true,
+      "failures": [],
+      "answer": "In the `psf/cachecontrol` repository, 8 out of 48 completed workflow runs failed, resulting in a failure rate of approximately 16.67%.",
+      "trace": [
+        {
+          "tool": "delivery_metric",
+          "arguments": "{\"repo\":\"psf/cachecontrol\",\"metric\":\"workflow_failure_rate\"}",
+          "result": "{\n  \"repo\": \"psf/cachecontrol\",\n  \"metric\": \"workflow_failure_rate\",\n  \"definition\": \"Share of completed workflow runs created in the window whose conclusion is 'failure'. Runs that are cancelled, skipped or still in progress are excluded from both numerator and denominator.\",\n  \"unit\": \"ratio\",\n  \"window\": {\n    \"since\": null,\n    \"until\": null\n  },\n  \"sample_size\": 48,\n  \"value\": 0.1667,\n  \"failures\": 8,\n  \"completed_runs\": 48,\n  \"summary\": \"8 of 48 completed workflow runs failed, a failure rate of 0.1667\",\n  \"citations\": {\n    \"workflow_runs\": [\n      39817814153,\n      39990308776,\n      39990313654,\n      39996705700,\n      40005393740,\n      40005554941,\n      40005555032,\n      40017787687,\n      40017795446,\n      40203864118,\n      40203864124,\n      40206745735,\n      40206750972,\n      40206845263,\n      40206942120,\n      40206942140,\n      40209908700,\n      40209913947,\n      40363271587,\n      40545120400,\n      40545282321,\n      40545282582,\n      40608534910,\n      40608535200,\n      40730189578,\n      40730194949,\n      40730362266,\n      40730362317,\n      40915774638,\n      40915777735,\n      41093755139,\n      41093761221,\n      41093898328,\n      41093898420,\n      41104695367,\n      41104721320,\n      41104721432,\n      41104902384,\n      41104902461,\n      41123456965,\n      41123463316,\n      41127168935,\n      41485692013,\n      41644776724,\n      41644776727,\n      41678556619,\n      41701515744,\n      41701515747\n    ],\n    \"failed_runs\": [\n      40608534910,\n      40608535200,\n      41104721320,\n      41127168935,\n      41644776724,\n      41644776727,\n      41701515744,\n      41701515747\n    ]\n  },\n  \"refused\": false\n}"
+        }
+      ],
+      "audit": [
+        {
+          "id": 22,
+          "ts": "2026-11-04T00:43:02.554+00:00",
+          "user": "bob",
+          "role": "reader",
+          "tool": "delivery_metric",
+          "arguments": {
+            "metric": "workflow_failure_rate",
+            "repo": "psf/cachecontrol",
+            "since": "",
+            "until": ""
+          },
+          "decision": "allow",
+          "reason": "",
+          "outcome": "ok",
+          "duration_ms": 6.224
+        }
+      ]
+    },
+    {
+      "id": "q11-failed-run-citations",
+      "question": "Which workflow runs failed in psf/cachecontrol?",
+      "tool": "delivery_metric",
+      "passed": true,
+      "failures": [],
+      "answer": "In the `psf/cachecontrol` repository, 8 out of 48 completed workflow runs failed, resulting in a failure rate of approximately 16.67%. The failed workflow run IDs are:\n\n- 40608534910\n- 40608535200\n- 41104721320\n- 41127168935\n- 41644776724\n- 41644776727\n- 41701515744\n- 41701515747",
+      "trace": [
+        {
+          "tool": "list_delivery_repos",
+          "arguments": "{}",
+          "result": "{\n  \"count\": 1,\n  \"repos\": [\n    {\n      \"repo\": \"psf/cachecontrol\",\n      \"ingested_at\": \"2026-11-04T00:42:30+00:00\",\n      \"complete\": true,\n      \"pull_requests\": 12,\n      \"reviews\": 8,\n      \"workflow_runs\": 50\n    }\n  ],\n  \"available_metrics\": [\n    \"pr_cycle_time\",\n    \"time_to_first_review\",\n    \"review_count\",\n    \"merge_frequency\",\n    \"workflow_failure_rate\"\n  ],\n  \"note\": \"Only these repositories can be reported on. Anything else has not been ingested and must not be answered from memory.\"\n}"
+        },
+        {
+          "tool": "delivery_metric",
+          "arguments": "{\"repo\":\"psf/cachecontrol\",\"metric\":\"workflow_failure_rate\"}",
+          "result": "{\n  \"repo\": \"psf/cachecontrol\",\n  \"metric\": \"workflow_failure_rate\",\n  \"definition\": \"Share of completed workflow runs created in the window whose conclusion is 'failure'. Runs that are cancelled, skipped or still in progress are excluded from both numerator and denominator.\",\n  \"unit\": \"ratio\",\n  \"window\": {\n    \"since\": null,\n    \"until\": null\n  },\n  \"sample_size\": 48,\n  \"value\": 0.1667,\n  \"failures\": 8,\n  \"completed_runs\": 48,\n  \"summary\": \"8 of 48 completed workflow runs failed, a failure rate of 0.1667\",\n  \"citations\": {\n    \"workflow_runs\": [\n      39817814153,\n      39990308776,\n      39990313654,\n      39996705700,\n      40005393740,\n      40005554941,\n      40005555032,\n      40017787687,\n      40017795446,\n      40203864118,\n      40203864124,\n      40206745735,\n      40206750972,\n      40206845263,\n      40206942120,\n      40206942140,\n      40209908700,\n      40209913947,\n      40363271587,\n      40545120400,\n      40545282321,\n      40545282582,\n      40608534910,\n      40608535200,\n      40730189578,\n      40730194949,\n      40730362266,\n      40730362317,\n      40915774638,\n      40915777735,\n      41093755139,\n      41093761221,\n      41093898328,\n      41093898420,\n      41104695367,\n      41104721320,\n      41104721432,\n      41104902384,\n      41104902461,\n      41123456965,\n      41123463316,\n      41127168935,\n      41485692013,\n      41644776724,\n      41644776727,\n      41678556619,\n      41701515744,\n      41701515747\n    ],\n    \"failed_runs\": [\n      40608534910,\n      40608535200,\n      41104721320,\n      41127168935,\n      41644776724,\n      41644776727,\n      41701515744,\n      41701515747\n    ]\n  },\n  \"refused\": false\n}"
+        }
+      ],
+      "audit": [
+        {
+          "id": 23,
+          "ts": "2026-11-04T00:43:05.629+00:00",
+          "user": "bob",
+          "role": "reader",
+          "tool": "list_delivery_repos",
+          "arguments": {},
+          "decision": "allow",
+          "reason": "",
+          "outcome": "ok",
+          "duration_ms": 1.753
+        },
+        {
+          "id": 24,
+          "ts": "2026-11-04T00:43:06.354+00:00",
+          "user": "bob",
+          "role": "reader",
+          "tool": "delivery_metric",
+          "arguments": {
+            "metric": "workflow_failure_rate",
+            "repo": "psf/cachecontrol",
+            "since": "",
+            "until": ""
+          },
+          "decision": "allow",
+          "reason": "",
+          "outcome": "ok",
+          "duration_ms": 6.179
+        }
+      ]
+    },
+    {
+      "id": "q12-merge-frequency",
+      "question": "How many pull requests are merged per week in psf/cachecontrol?",
+      "tool": "delivery_metric",
+      "passed": false,
+      "failures": [
+        "answer does not state the expected total_merges"
+      ],
+      "answer": "On average, 3.5 pull requests are merged per week in the `psf/cachecontrol` repository.",
+      "trace": [
+        {
+          "tool": "delivery_metric",
+          "arguments": "{\"repo\":\"psf/cachecontrol\",\"metric\":\"merge_frequency\"}",
+          "result": "{\n  \"repo\": \"psf/cachecontrol\",\n  \"metric\": \"merge_frequency\",\n  \"definition\": \"Merged pull requests per calendar week, bucketed by the Monday of the week the merge happened. Weeks with no merges do not appear.\",\n  \"unit\": \"merged pull requests per week\",\n  \"window\": {\n    \"since\": null,\n    \"until\": null\n  },\n  \"sample_size\": 7,\n  \"value\": 3.5,\n  \"weeks\": [\n    {\n      \"week_starting\": \"2026-10-19\",\n      \"merges\": 5,\n      \"pull_requests\": [\n        466,\n        485,\n        486,\n        487,\n        488\n      ]\n    },\n    {\n      \"week_starting\": \"2026-10-26\",\n      \"merges\": 2,\n      \"pull_requests\": [\n        492,\n        493\n      ]\n    }\n  ],\n  \"total_merges\": 7,\n  \"summary\": \"7 pull requests were merged across 2 week(s), 3.5 merged pull requests per week\",\n  \"citations\": {\n    \"pull_requests\": [\n      466,\n      485,\n      486,\n      487,\n      488,\n      492,\n      493\n    ]\n  },\n  \"refused\": false\n}"
+        }
+      ],
+      "audit": [
+        {
+          "id": 25,
+          "ts": "2026-11-04T00:43:10.729+00:00",
+          "user": "bob",
+          "role": "reader",
+          "tool": "delivery_metric",
+          "arguments": {
+            "metric": "merge_frequency",
+            "repo": "psf/cachecontrol",
+            "since": "",
+            "until": ""
+          },
+          "decision": "allow",
+          "reason": "",
+          "outcome": "ok",
+          "duration_ms": 6.294
+        }
+      ]
+    },
+    {
+      "id": "q13-merge-weeks",
+      "question": "Which weeks had merges in psf/cachecontrol, and which pull requests?",
+      "tool": "delivery_metric",
+      "passed": true,
+      "failures": [],
+      "answer": "In the `psf/cachecontrol` repository, merges occurred in the following weeks:\n\n1. **Week starting on 2026-10-19**\n   - Merges: 5\n   - Pull Requests: 466, 485, 486, 487, 488\n\n2. **Week starting on 2026-10-26**\n   - Merges: 2\n   - Pull Requests: 492, 493\n\nIn total, there were 7 pull requests merged across these 2 weeks.",
+      "trace": [
+        {
+          "tool": "delivery_metric",
+          "arguments": "{\"repo\":\"psf/cachecontrol\",\"metric\":\"merge_frequency\"}",
+          "result": "{\n  \"repo\": \"psf/cachecontrol\",\n  \"metric\": \"merge_frequency\",\n  \"definition\": \"Merged pull requests per calendar week, bucketed by the Monday of the week the merge happened. Weeks with no merges do not appear.\",\n  \"unit\": \"merged pull requests per week\",\n  \"window\": {\n    \"since\": null,\n    \"until\": null\n  },\n  \"sample_size\": 7,\n  \"value\": 3.5,\n  \"weeks\": [\n    {\n      \"week_starting\": \"2026-10-19\",\n      \"merges\": 5,\n      \"pull_requests\": [\n        466,\n        485,\n        486,\n        487,\n        488\n      ]\n    },\n    {\n      \"week_starting\": \"2026-10-26\",\n      \"merges\": 2,\n      \"pull_requests\": [\n        492,\n        493\n      ]\n    }\n  ],\n  \"total_merges\": 7,\n  \"summary\": \"7 pull requests were merged across 2 week(s), 3.5 merged pull requests per week\",\n  \"citations\": {\n    \"pull_requests\": [\n      466,\n      485,\n      486,\n      487,\n      488,\n      492,\n      493\n    ]\n  },\n  \"refused\": false\n}"
+        }
+      ],
+      "audit": [
+        {
+          "id": 26,
+          "ts": "2026-11-04T00:43:12.786+00:00",
+          "user": "bob",
+          "role": "reader",
+          "tool": "delivery_metric",
+          "arguments": {
+            "metric": "merge_frequency",
+            "repo": "psf/cachecontrol",
+            "since": "",
+            "until": ""
+          },
+          "decision": "allow",
+          "reason": "",
+          "outcome": "ok",
+          "duration_ms": 8.446
+        }
+      ]
+    },
+    {
+      "id": "q14-windowed-first-week",
+      "question": "How many merges happened in the first week that had any, in psf/cachecontrol?",
+      "tool": "delivery_metric",
+      "passed": false,
+      "failures": [
+        "answer does not state the expected total_merges"
+      ],
+      "answer": "There were no merges in the first week of January 2023 for the repository `psf/cachecontrol`.",
+      "trace": [
+        {
+          "tool": "delivery_metric",
+          "arguments": "{\"repo\":\"psf/cachecontrol\",\"metric\":\"merge_frequency\",\"since\":\"2023-01-01\",\"until\":\"2023-01-07\"}",
+          "result": "{\n  \"refused\": true,\n  \"reason\": \"no rows match this metric and window, so there is nothing to report\",\n  \"repo\": \"psf/cachecontrol\",\n  \"metric\": \"merge_frequency\",\n  \"definition\": \"Merged pull requests per calendar week, bucketed by the Monday of the week the merge happened. Weeks with no merges do not appear.\",\n  \"window\": {\n    \"since\": \"2023-01-01\",\n    \"until\": \"2023-01-07\"\n  },\n  \"sample_size\": 0,\n  \"value\": null\n}"
+        }
+      ],
+      "audit": [
+        {
+          "id": 27,
+          "ts": "2026-11-04T00:43:15.801+00:00",
+          "user": "bob",
+          "role": "reader",
+          "tool": "delivery_metric",
+          "arguments": {
+            "metric": "merge_frequency",
+            "repo": "psf/cachecontrol",
+            "since": "2023-01-01",
+            "until": "2023-01-07"
+          },
+          "decision": "allow",
+          "reason": "",
+          "outcome": "ok",
+          "duration_ms": 9.293
+        }
+      ]
+    },
+    {
+      "id": "q15-which-repos",
+      "question": "Which repositories can you report delivery metrics for?",
+      "tool": "list_delivery_repos",
+      "passed": true,
+      "failures": [],
+      "answer": "The repository for which delivery metrics can be reported is:\n\n- **Repository**: psf/cachecontrol\n\nAvailable metrics include:\n- PR Cycle Time\n- Time to First Review\n- Review Count\n- Merge Frequency\n- Workflow Failure Rate",
+      "trace": [
+        {
+          "tool": "list_delivery_repos",
+          "arguments": "{}",
+          "result": "{\n  \"count\": 1,\n  \"repos\": [\n    {\n      \"repo\": \"psf/cachecontrol\",\n      \"ingested_at\": \"2026-11-04T00:42:30+00:00\",\n      \"complete\": true,\n      \"pull_requests\": 12,\n      \"reviews\": 8,\n      \"workflow_runs\": 50\n    }\n  ],\n  \"available_metrics\": [\n    \"pr_cycle_time\",\n    \"time_to_first_review\",\n    \"review_count\",\n    \"merge_frequency\",\n    \"workflow_failure_rate\"\n  ],\n  \"note\": \"Only these repositories can be reported on. Anything else has not been ingested and must not be answered from memory.\"\n}"
+        }
+      ],
+      "audit": [
+        {
+          "id": 28,
+          "ts": "2026-11-04T00:43:17.657+00:00",
+          "user": "bob",
+          "role": "reader",
+          "tool": "list_delivery_repos",
+          "arguments": {},
+          "decision": "allow",
+          "reason": "",
+          "outcome": "ok",
+          "duration_ms": 1.373
+        }
+      ]
+    },
+    {
+      "id": "q16-pull-request-detail",
+      "question": "Show me the details of the earliest pull request cited in the cycle time.",
+      "tool": "pull_request_detail",
+      "passed": true,
+      "failures": [],
+      "answer": "I cannot access the delivery metrics for the specified repository due to permission restrictions. Please check the repository settings or provide a different repository name.",
+      "trace": [
+        {
+          "tool": "delivery_metric",
+          "arguments": "{\"repo\":\"owner/repo\",\"metric\":\"pr_cycle_time\"}",
+          "result": "{\n  \"error\": \"denied by policy\",\n  \"decision\": \"deny\",\n  \"reason\": \"owner 'owner' is not in the allowed list for this role\",\n  \"tool\": \"delivery_metric\",\n  \"user\": \"bob\"\n}"
+        }
+      ],
+      "audit": [
+        {
+          "id": 29,
+          "ts": "2026-11-04T00:43:19.719+00:00",
+          "user": "bob",
+          "role": "reader",
+          "tool": "delivery_metric",
+          "arguments": {
+            "metric": "pr_cycle_time",
+            "repo": "owner/repo",
+            "since": "",
+            "until": ""
+          },
+          "decision": "deny",
+          "reason": "owner 'owner' is not in the allowed list for this role",
+          "outcome": "denied",
+          "duration_ms": 0.0
+        }
+      ]
+    },
+    {
+      "id": "q17-refuse-unknown-repo",
+      "question": "What is the pull request cycle time for torvalds/linux?",
+      "tool": "delivery_metric",
+      "passed": true,
+      "failures": [],
+      "answer": "I cannot access the pull request cycle time for the repository \"torvalds/linux\" due to policy restrictions.",
+      "trace": [
+        {
+          "tool": "delivery_metric",
+          "arguments": "{\"repo\":\"torvalds/linux\",\"metric\":\"pr_cycle_time\"}",
+          "result": "{\n  \"error\": \"denied by policy\",\n  \"decision\": \"deny\",\n  \"reason\": \"owner 'torvalds' is not in the allowed list for this role\",\n  \"tool\": \"delivery_metric\",\n  \"user\": \"bob\"\n}"
+        }
+      ],
+      "audit": [
+        {
+          "id": 30,
+          "ts": "2026-11-04T00:43:21.510+00:00",
+          "user": "bob",
+          "role": "reader",
+          "tool": "delivery_metric",
+          "arguments": {
+            "metric": "pr_cycle_time",
+            "repo": "torvalds/linux",
+            "since": "",
+            "until": ""
+          },
+          "decision": "deny",
+          "reason": "owner 'torvalds' is not in the allowed list for this role",
+          "outcome": "denied",
+          "duration_ms": 0.0
+        }
+      ]
+    },
+    {
+      "id": "q18-refuse-empty-window",
+      "question": "What was the cycle time for psf/cachecontrol during 1990?",
+      "tool": "delivery_metric",
+      "passed": true,
+      "failures": [],
+      "answer": "There is no data available for the pull request cycle time for the repository \"psf/cachecontrol\" during the year 1990, as there were no merged pull requests in that time frame.",
+      "trace": [
+        {
+          "tool": "delivery_metric",
+          "arguments": "{\"repo\":\"psf/cachecontrol\",\"metric\":\"pr_cycle_time\",\"since\":\"1990-01-01\",\"until\":\"1990-12-31\"}",
+          "result": "{\n  \"refused\": true,\n  \"reason\": \"no rows match this metric and window, so there is nothing to report\",\n  \"repo\": \"psf/cachecontrol\",\n  \"metric\": \"pr_cycle_time\",\n  \"definition\": \"Hours from pull request creation to merge, over merged pull requests whose merge falls in the window. Unmerged pull requests are excluded.\",\n  \"window\": {\n    \"since\": \"1990-01-01\",\n    \"until\": \"1990-12-31\"\n  },\n  \"sample_size\": 0,\n  \"value\": null\n}"
+        }
+      ],
+      "audit": [
+        {
+          "id": 31,
+          "ts": "2026-11-04T00:43:23.522+00:00",
+          "user": "bob",
+          "role": "reader",
+          "tool": "delivery_metric",
+          "arguments": {
+            "metric": "pr_cycle_time",
+            "repo": "psf/cachecontrol",
+            "since": "1990-01-01",
+            "until": "1990-12-31"
+          },
+          "decision": "allow",
+          "reason": "",
+          "outcome": "ok",
+          "duration_ms": 9.244
+        }
+      ]
+    },
+    {
+      "id": "q19-refuse-unknown-metric",
+      "question": "What is the team velocity for psf/cachecontrol?",
+      "tool": "delivery_metric",
+      "passed": false,
+      "failures": [
+        "expected the answer to refuse, it did not",
+        "a refusal quoted the merges_per_week figure anyway"
+      ],
+      "answer": "The team velocity for the `psf/cachecontrol` repository is 3.5 merged pull requests per week, based on the last 2 weeks of activity.",
+      "trace": [
+        {
+          "tool": "delivery_metric",
+          "arguments": "{\"repo\":\"psf/cachecontrol\",\"metric\":\"merge_frequency\"}",
+          "result": "{\n  \"repo\": \"psf/cachecontrol\",\n  \"metric\": \"merge_frequency\",\n  \"definition\": \"Merged pull requests per calendar week, bucketed by the Monday of the week the merge happened. Weeks with no merges do not appear.\",\n  \"unit\": \"merged pull requests per week\",\n  \"window\": {\n    \"since\": null,\n    \"until\": null\n  },\n  \"sample_size\": 7,\n  \"value\": 3.5,\n  \"weeks\": [\n    {\n      \"week_starting\": \"2026-10-19\",\n      \"merges\": 5,\n      \"pull_requests\": [\n        466,\n        485,\n        486,\n        487,\n        488\n      ]\n    },\n    {\n      \"week_starting\": \"2026-10-26\",\n      \"merges\": 2,\n      \"pull_requests\": [\n        492,\n        493\n      ]\n    }\n  ],\n  \"total_merges\": 7,\n  \"summary\": \"7 pull requests were merged across 2 week(s), 3.5 merged pull requests per week\",\n  \"citations\": {\n    \"pull_requests\": [\n      466,\n      485,\n      486,\n      487,\n      488,\n      492,\n      493\n    ]\n  },\n  \"refused\": false\n}"
+        }
+      ],
+      "audit": [
+        {
+          "id": 32,
+          "ts": "2026-11-04T00:43:25.549+00:00",
+          "user": "bob",
+          "role": "reader",
+          "tool": "delivery_metric",
+          "arguments": {
+            "metric": "merge_frequency",
+            "repo": "psf/cachecontrol",
+            "since": "",
+            "until": ""
+          },
+          "decision": "allow",
+          "reason": "",
+          "outcome": "ok",
+          "duration_ms": 8.002
+        }
+      ]
+    },
+    {
+      "id": "q20-refuse-unknown-pull-request",
+      "question": "Show me pull request 999999 in psf/cachecontrol.",
+      "tool": "pull_request_detail",
+      "passed": true,
+      "failures": [],
+      "answer": "Pull request 999999 is not available in the ingested data for the repository `psf/cachecontrol`.",
+      "trace": [
+        {
+          "tool": "pull_request_detail",
+          "arguments": "{\"repo\":\"psf/cachecontrol\",\"number\":999999}",
+          "result": "{\n  \"refused\": true,\n  \"reason\": \"pull request 999999 is not in the ingested data for psf/cachecontrol\"\n}"
+        }
+      ],
+      "audit": [
+        {
+          "id": 33,
+          "ts": "2026-11-04T00:43:27.583+00:00",
+          "user": "bob",
+          "role": "reader",
+          "tool": "pull_request_detail",
+          "arguments": {
+            "number": 999999,
+            "repo": "psf/cachecontrol"
+          },
+          "decision": "allow",
+          "reason": "",
+          "outcome": "ok",
+          "duration_ms": 3.205
+        }
+      ]
+    }
+  ]
+}

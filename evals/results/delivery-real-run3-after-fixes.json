@@ -1,0 +1,267 @@
+{
+  "mode": "real",
+  "passed": 0,
+  "total": 20,
+  "results": [
+    {
+      "id": "q01-cycle-time-median",
+      "question": "What is the median pull request cycle time for psf/cachecontrol?",
+      "tool": "delivery_metric",
+      "passed": false,
+      "failures": [
+        "openai.AuthenticationError: Error code: 401 - {'error': {'message': 'Incorrect API key provided: .... You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}} at _base_client.py:1141",
+        "  caused by httpx2.HTTPStatusError: Client error '401 Unauthorized' for url 'https://api.openai.com/v1/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401 at _models.py:827"
+      ],
+      "answer": "",
+      "trace": [],
+      "audit": []
+    },
+    {
+      "id": "q02-cycle-time-citations",
+      "question": "Which pull requests were used to compute the cycle time for psf/cachecontrol?",
+      "tool": "delivery_metric",
+      "passed": false,
+      "failures": [
+        "openai.AuthenticationError: Error code: 401 - {'error': {'message': 'Incorrect API key provided: .... You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}} at _base_client.py:1141",
+        "  caused by httpx2.HTTPStatusError: Client error '401 Unauthorized' for url 'https://api.openai.com/v1/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401 at _models.py:827"
+      ],
+      "answer": "",
+      "trace": [],
+      "audit": []
+    },
+    {
+      "id": "q03-cycle-time-mean",
+      "question": "What is the mean pull request cycle time for psf/cachecontrol?",
+      "tool": "delivery_metric",
+      "passed": false,
+      "failures": [
+        "openai.AuthenticationError: Error code: 401 - {'error': {'message': 'Incorrect API key provided: .... You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}} at _base_client.py:1141",
+        "  caused by httpx2.HTTPStatusError: Client error '401 Unauthorized' for url 'https://api.openai.com/v1/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401 at _models.py:827"
+      ],
+      "answer": "",
+      "trace": [],
+      "audit": []
+    },
+    {
+      "id": "q04-how-many-merged",
+      "question": "How many merged pull requests is the cycle time for psf/cachecontrol based on?",
+      "tool": "delivery_metric",
+      "passed": false,
+      "failures": [
+        "openai.AuthenticationError: Error code: 401 - {'error': {'message': 'Incorrect API key provided: .... You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}} at _base_client.py:1141",
+        "  caused by httpx2.HTTPStatusError: Client error '401 Unauthorized' for url 'https://api.openai.com/v1/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401 at _models.py:827"
+      ],
+      "answer": "",
+      "trace": [],
+      "audit": []
+    },
+    {
+      "id": "q05-time-to-first-review",
+      "question": "How long does a pull request wait for its first review in psf/cachecontrol?",
+      "tool": "delivery_metric",
+      "passed": false,
+      "failures": [
+        "openai.AuthenticationError: Error code: 401 - {'error': {'message': 'Incorrect API key provided: .... You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}} at _base_client.py:1141",
+        "  caused by httpx2.HTTPStatusError: Client error '401 Unauthorized' for url 'https://api.openai.com/v1/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401 at _models.py:827"
+      ],
+      "answer": "",
+      "trace": [],
+      "audit": []
+    },
+    {
+      "id": "q06-time-to-first-review-citations",
+      "question": "Which pull requests had a first review measured in psf/cachecontrol?",
+      "tool": "delivery_metric",
+      "passed": false,
+      "failures": [
+        "openai.AuthenticationError: Error code: 401 - {'error': {'message': 'Incorrect API key provided: .... You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}} at _base_client.py:1141",
+        "  caused by httpx2.HTTPStatusError: Client error '401 Unauthorized' for url 'https://api.openai.com/v1/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401 at _models.py:827"
+      ],
+      "answer": "",
+      "trace": [],
+      "audit": []
+    },
+    {
+      "id": "q07-review-count-median",
+      "question": "What is the median number of reviews per pull request in psf/cachecontrol?",
+      "tool": "delivery_metric",
+      "passed": false,
+      "failures": [
+        "openai.AuthenticationError: Error code: 401 - {'error': {'message': 'Incorrect API key provided: .... You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}} at _base_client.py:1141",
+        "  caused by httpx2.HTTPStatusError: Client error '401 Unauthorized' for url 'https://api.openai.com/v1/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401 at _models.py:827"
+      ],
+      "answer": "",
+      "trace": [],
+      "audit": []
+    },
+    {
+      "id": "q08-review-count-mean",
+      "question": "On average how many reviews does a pull request get in psf/cachecontrol?",
+      "tool": "delivery_metric",
+      "passed": false,
+      "failures": [
+        "openai.AuthenticationError: Error code: 401 - {'error': {'message': 'Incorrect API key provided: .... You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}} at _base_client.py:1141",
+        "  caused by httpx2.HTTPStatusError: Client error '401 Unauthorized' for url 'https://api.openai.com/v1/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401 at _models.py:827"
+      ],
+      "answer": "",
+      "trace": [],
+      "audit": []
+    },
+    {
+      "id": "q09-workflow-failure-rate",
+      "question": "What share of workflow runs fail in psf/cachecontrol?",
+      "tool": "delivery_metric",
+      "passed": false,
+      "failures": [
+        "openai.AuthenticationError: Error code: 401 - {'error': {'message': 'Incorrect API key provided: .... You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}} at _base_client.py:1141",
+        "  caused by httpx2.HTTPStatusError: Client error '401 Unauthorized' for url 'https://api.openai.com/v1/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401 at _models.py:827"
+      ],
+      "answer": "",
+      "trace": [],
+      "audit": []
+    },
+    {
+      "id": "q10-workflow-failure-counts",
+      "question": "How many workflow runs failed out of how many completed in psf/cachecontrol?",
+      "tool": "delivery_metric",
+      "passed": false,
+      "failures": [
+        "openai.AuthenticationError: Error code: 401 - {'error': {'message': 'Incorrect API key provided: .... You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}} at _base_client.py:1141",
+        "  caused by httpx2.HTTPStatusError: Client error '401 Unauthorized' for url 'https://api.openai.com/v1/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401 at _models.py:827"
+      ],
+      "answer": "",
+      "trace": [],
+      "audit": []
+    },
+    {
+      "id": "q11-failed-run-citations",
+      "question": "Which workflow runs failed in psf/cachecontrol?",
+      "tool": "delivery_metric",
+      "passed": false,
+      "failures": [
+        "openai.AuthenticationError: Error code: 401 - {'error': {'message': 'Incorrect API key provided: .... You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}} at _base_client.py:1141",
+        "  caused by httpx2.HTTPStatusError: Client error '401 Unauthorized' for url 'https://api.openai.com/v1/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401 at _models.py:827"
+      ],
+      "answer": "",
+      "trace": [],
+      "audit": []
+    },
+    {
+      "id": "q12-merge-frequency",
+      "question": "How many pull requests are merged per week in psf/cachecontrol?",
+      "tool": "delivery_metric",
+      "passed": false,
+      "failures": [
+        "openai.AuthenticationError: Error code: 401 - {'error': {'message': 'Incorrect API key provided: .... You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}} at _base_client.py:1141",
+        "  caused by httpx2.HTTPStatusError: Client error '401 Unauthorized' for url 'https://api.openai.com/v1/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401 at _models.py:827"
+      ],
+      "answer": "",
+      "trace": [],
+      "audit": []
+    },
+    {
+      "id": "q13-merge-weeks",
+      "question": "Which weeks had merges in psf/cachecontrol, and which pull requests?",
+      "tool": "delivery_metric",
+      "passed": false,
+      "failures": [
+        "openai.AuthenticationError: Error code: 401 - {'error': {'message': 'Incorrect API key provided: .... You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}} at _base_client.py:1141",
+        "  caused by httpx2.HTTPStatusError: Client error '401 Unauthorized' for url 'https://api.openai.com/v1/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401 at _models.py:827"
+      ],
+      "answer": "",
+      "trace": [],
+      "audit": []
+    },
+    {
+      "id": "q14-windowed-first-week",
+      "question": "How many merges happened in the first week that had any, in psf/cachecontrol?",
+      "tool": "delivery_metric",
+      "passed": false,
+      "failures": [
+        "openai.AuthenticationError: Error code: 401 - {'error': {'message': 'Incorrect API key provided: .... You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}} at _base_client.py:1141",
+        "  caused by httpx2.HTTPStatusError: Client error '401 Unauthorized' for url 'https://api.openai.com/v1/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401 at _models.py:827"
+      ],
+      "answer": "",
+      "trace": [],
+      "audit": []
+    },
+    {
+      "id": "q15-which-repos",
+      "question": "Which repositories can you report delivery metrics for?",
+      "tool": "list_delivery_repos",
+      "passed": false,
+      "failures": [
+        "openai.AuthenticationError: Error code: 401 - {'error': {'message': 'Incorrect API key provided: .... You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}} at _base_client.py:1141",
+        "  caused by httpx2.HTTPStatusError: Client error '401 Unauthorized' for url 'https://api.openai.com/v1/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401 at _models.py:827"
+      ],
+      "answer": "",
+      "trace": [],
+      "audit": []
+    },
+    {
+      "id": "q16-pull-request-detail",
+      "question": "Show me the details of the earliest pull request cited in the cycle time.",
+      "tool": "pull_request_detail",
+      "passed": false,
+      "failures": [
+        "openai.AuthenticationError: Error code: 401 - {'error': {'message': 'Incorrect API key provided: .... You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}} at _base_client.py:1141",
+        "  caused by httpx2.HTTPStatusError: Client error '401 Unauthorized' for url 'https://api.openai.com/v1/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401 at _models.py:827"
+      ],
+      "answer": "",
+      "trace": [],
+      "audit": []
+    },
+    {
+      "id": "q17-refuse-unknown-repo",
+      "question": "What is the pull request cycle time for torvalds/linux?",
+      "tool": "delivery_metric",
+      "passed": false,
+      "failures": [
+        "openai.AuthenticationError: Error code: 401 - {'error': {'message': 'Incorrect API key provided: .... You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}} at _base_client.py:1141",
+        "  caused by httpx2.HTTPStatusError: Client error '401 Unauthorized' for url 'https://api.openai.com/v1/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401 at _models.py:827"
+      ],
+      "answer": "",
+      "trace": [],
+      "audit": []
+    },
+    {
+      "id": "q18-refuse-empty-window",
+      "question": "What was the cycle time for psf/cachecontrol during 1990?",
+      "tool": "delivery_metric",
+      "passed": false,
+      "failures": [
+        "openai.AuthenticationError: Error code: 401 - {'error': {'message': 'Incorrect API key provided: .... You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}} at _base_client.py:1141",
+        "  caused by httpx2.HTTPStatusError: Client error '401 Unauthorized' for url 'https://api.openai.com/v1/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401 at _models.py:827"
+      ],
+      "answer": "",
+      "trace": [],
+      "audit": []
+    },
+    {
+      "id": "q19-refuse-unknown-metric",
+      "question": "What is the team velocity for psf/cachecontrol?",
+      "tool": "delivery_metric",
+      "passed": false,
+      "failures": [
+        "openai.AuthenticationError: Error code: 401 - {'error': {'message': 'Incorrect API key provided: .... You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}} at _base_client.py:1141",
+        "  caused by httpx2.HTTPStatusError: Client error '401 Unauthorized' for url 'https://api.openai.com/v1/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401 at _models.py:827"
+      ],
+      "answer": "",
+      "trace": [],
+      "audit": []
+    },
+    {
+      "id": "q20-refuse-unknown-pull-request",
+      "question": "Show me pull request 999999 in psf/cachecontrol.",
+      "tool": "pull_request_detail",
+      "passed": false,
+      "failures": [
+        "openai.AuthenticationError: Error code: 401 - {'error': {'message': 'Incorrect API key provided: .... You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}} at _base_client.py:1141",
+        "  caused by httpx2.HTTPStatusError: Client error '401 Unauthorized' for url 'https://api.openai.com/v1/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401 at _models.py:827"
+      ],
+      "answer": "",
+      "trace": [],
+      "audit": []
+    }
+  ]
+}

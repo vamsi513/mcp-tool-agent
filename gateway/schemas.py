@@ -147,25 +147,31 @@ def response_body(
             "input_tokens": input_tokens,
             "output_tokens": output_tokens,
             "total_tokens": input_tokens + output_tokens,
+            # Reported as zero: this gateway does not track prompt caching or
+            # reasoning tokens, and does not read them back from an upstream.
+            # Zero here means "not tracked", not "measured as none".
+            "input_tokens_details": {"cached_tokens": 0, "cache_write_tokens": 0},
+            "output_tokens_details": {"reasoning_tokens": 0},
         },
+        # The gateway does not support tools, so these are honest constants
+        # rather than placeholders.
+        "parallel_tool_calls": False,
+        "tool_choice": "none",
+        "tools": [],
     }
 
 
-# Fields the SDK's Response model requires that the plain body above does not
-# carry. They are added only to the object embedded in stream events, so the
-# non-streaming response body is left exactly as it was.
 def stream_response_envelope(
     response_id: str, model: str, text: str, input_tokens: int, output_tokens: int,
     status: str, item_id: str, with_item: bool = True,
 ) -> dict:
-    body = response_body(
+    """The response object embedded in stream events.
+
+    Identical to the endpoint's body now that both carry the fields the SDK's
+    Response model requires. Kept as a named call site so the streaming code
+    reads clearly.
+    """
+    return response_body(
         response_id, model, text, input_tokens, output_tokens, status, item_id,
         with_item=with_item,
     )
-    # This gateway does not support tools, so these are honest constants.
-    body["parallel_tool_calls"] = False
-    body["tool_choice"] = "none"
-    body["tools"] = []
-    body["usage"]["input_tokens_details"] = {"cached_tokens": 0, "cache_write_tokens": 0}
-    body["usage"]["output_tokens_details"] = {"reasoning_tokens": 0}
-    return body

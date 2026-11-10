@@ -101,7 +101,46 @@ def test_responses_shape(client):
     assert body["output_text"] == "hello there"
 
     # usage is the Responses naming, not the chat one.
-    assert body["usage"] == {"input_tokens": 3, "output_tokens": 2, "total_tokens": 5}
+    assert body["usage"]["input_tokens"] == 3
+    assert body["usage"]["output_tokens"] == 2
+    assert body["usage"]["total_tokens"] == 5
+    # Reported as zero because the gateway does not track them.
+    assert body["usage"]["input_tokens_details"] == {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+    }
+    assert body["usage"]["output_tokens_details"] == {"reasoning_tokens": 0}
+
+    # The gateway has no tools, so these are constants rather than placeholders.
+    assert body["parallel_tool_calls"] is False
+    assert body["tool_choice"] == "none"
+    assert body["tools"] == []
+
+
+def test_the_non_streaming_body_validates_against_the_sdk(client):
+    """Checked offline against the installed openai package's own model.
+
+    No client and no network: the body is parsed with the SDK's Response
+    model, so the shape is asserted rather than claimed.
+    """
+    import pydantic
+    from openai.types.responses import Response
+
+    test_client, _ = client
+    body = test_client.post(
+        "/v1/responses", headers=HEADERS, json={"model": "fake-1", "input": "a b c"}
+    ).json()
+
+    parsed = pydantic.TypeAdapter(Response).validate_python(body)
+
+    assert parsed.object == "response"
+    assert parsed.status == "completed"
+    assert parsed.output_text == "hello there"
+    assert parsed.usage is not None
+    assert parsed.usage.total_tokens == 5
+    assert parsed.usage.input_tokens_details.cached_tokens == 0
+    assert parsed.usage.output_tokens_details.reasoning_tokens == 0
+    assert parsed.tools == []
 
 
 def test_responses_accepts_a_list_input(client):

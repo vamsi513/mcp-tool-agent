@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 import os
-from collections.abc import Iterator
+from collections.abc import Generator
 from typing import Any
 
 import httpx
@@ -117,8 +117,12 @@ class OpenAIProvider:
         temperature: float | None = None,
         max_tokens: int | None = None,
         extra_system: str = "",
-    ) -> Iterator[str]:
+    ) -> Generator[str, None, Completion]:
         body = _body(model, messages, temperature, max_tokens, extra_system, stream=True)
+        text = ""
+        finish_reason = "stop"
+        prompt_tokens = 0
+        completion_tokens = 0
         try:
             with http_client(timeout=TIMEOUT_SECONDS) as client, client.stream(
                 "POST", f"{base_url()}/chat/completions", headers=_headers(), json=body
@@ -127,27 +131,45 @@ class OpenAIProvider:
                     response.read()
                     raise upstream_failure(self.name, _message(response))
                 for line in response.iter_lines():
-                    delta = _delta_from_line(line)
-                    if delta:
-                        yield delta
+                    event = _event_from_line(line)
+                    if event is None:
+                        continue
+                    choices = event.get("choices") or []
+                    if choices:
+                        delta = content_to_text((choices[0].get("delta") or {}).get("content"))
+                        if choices[0].get("finish_reason"):
+                            finish_reason = choices[0]["finish_reason"]
+                        if delta:
+                            text += delta
+                            yield delta
+                    usage = event.get("usage")
+                    if isinstance(usage, dict):
+                        prompt_tokens = int(usage.get("prompt_tokens") or 0)
+                        completion_tokens = int(usage.get("completion_tokens") or 0)
         except httpx.RequestError as exc:
             raise upstream_failure(self.name, exc.__class__.__name__) from exc
 
+        return Completion(
+            text=text,
+            finish_reason=finish_reason,
+            input_tokens=prompt_tokens,
+            output_tokens=completion_tokens,
+            model=model,
+        )
 
-def _delta_from_line(line: str) -> str:
+
+def _event_from_line(line: str) -> dict | None:
+    """The JSON of one SSE data line, or None for keep-alives and [DONE]."""
     if not line.startswith("data:"):
-        return ""
+        return None
     data = line[len("data:") :].strip()
     if not data or data == "[DONE]":
-        return ""
+        return None
     try:
         event = json.loads(data)
     except ValueError:
-        return ""
-    choices = event.get("choices") or []
-    if not choices:
-        return ""
-    return content_to_text((choices[0].get("delta") or {}).get("content"))
+        return None
+    return event if isinstance(event, dict) else None
 
 
 def _message(response: httpx.Response) -> str:

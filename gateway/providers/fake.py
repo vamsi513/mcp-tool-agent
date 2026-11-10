@@ -8,7 +8,7 @@ every gateway test runs offline.
 from __future__ import annotations
 
 import time
-from collections.abc import Iterator
+from collections.abc import Generator
 
 from gateway.providers.base import Completion
 from gateway.translate import content_to_text
@@ -84,7 +84,7 @@ class FakeProvider:
         temperature: float | None = None,
         max_tokens: int | None = None,
         extra_system: str = "",
-    ) -> Iterator[str]:
+    ) -> Generator[str, None, Completion]:
         self._record(model, messages, extra_system)
         if self.delay_seconds:
             time.sleep(self.delay_seconds)
@@ -93,3 +93,14 @@ class FakeProvider:
         words = reply.split()
         for index, word in enumerate(words):
             yield word if index == 0 else " " + word
+
+        prompt = " ".join(
+            [extra_system] + [content_to_text(m.get("content")) for m in messages]
+        )
+        return Completion(
+            text=reply,
+            finish_reason=self.finish_reason,
+            input_tokens=count_tokens(prompt),
+            output_tokens=count_tokens(reply),
+            model=model,
+        )

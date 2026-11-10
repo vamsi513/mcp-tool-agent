@@ -8,7 +8,7 @@ HTTP code is synchronous httpx.
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Generator, Iterator
 from dataclasses import dataclass
 from typing import Protocol
 
@@ -56,6 +56,39 @@ class Provider(Protocol):
         temperature: float | None = None,
         max_tokens: int | None = None,
         extra_system: str = "",
-    ) -> Iterator[str]:
-        """Yield text deltas. Only text is streamed; see the README."""
+    ) -> Generator[str, None, Completion]:
+        """Yield text deltas, then return the final usage.
+
+        A generator's return value, so the caller gets the upstream's own
+        token counts once the stream ends rather than guessing them from the
+        text. Budgets are charged from that. An upstream that reports no
+        usage yields a Completion with zero counts, which is visible as a
+        zero usage row rather than silently invented numbers.
+
+        Only text is streamed; see the README for what is not supported.
+        """
         ...
+
+
+class StreamCollector:
+    """Iterates a provider stream, keeping the text and the final usage.
+
+    A provider's stream yields deltas and returns a Completion, so the
+    iteration is explicit: each delta is accumulated and passed on, and the
+    return value is captured when the generator stops.
+    """
+
+    def __init__(self, stream: Generator[str, None, Completion]) -> None:
+        self._stream = stream
+        self.text = ""
+        self.usage: Completion | None = None
+
+    def __iter__(self) -> Iterator[str]:
+        while True:
+            try:
+                delta = next(self._stream)
+            except StopIteration as stop:
+                self.usage = stop.value if isinstance(stop.value, Completion) else None
+                return
+            self.text += delta
+            yield delta

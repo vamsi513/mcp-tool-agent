@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import logging
 from collections.abc import Iterator
+from itertools import count
 from typing import Any
 
 from fastapi import FastAPI, Header, Request
@@ -29,8 +30,11 @@ from gateway.schemas import (
     ResponsesRequest,
     chat_chunk_body,
     chat_completion_body,
+    message_item,
     new_id,
+    output_text_part,
     response_body,
+    stream_response_envelope,
 )
 from gateway.sessions import Session, SessionStore, build_store
 from gateway.translate import content_to_text, responses_input_to_messages
@@ -210,7 +214,11 @@ def create_app(
         )
 
         def frames() -> Iterator[str]:
-            yield _sse(chat_chunk_body(completion_id, body.model, delta=""))
+            # The role is sent once, at the start, as OpenAI does; the delta
+            # chunks that follow carry content only.
+            yield _sse(
+                chat_chunk_body(completion_id, body.model, delta="", include_role=True)
+            )
             for delta in collector:
                 yield _sse(chat_chunk_body(completion_id, body.model, delta=delta))
             usage = collector.usage
@@ -298,44 +306,92 @@ def create_app(
         item_id = new_id("msg_")
 
         def frames() -> Iterator[str]:
-            created = response_body(response_id, body.model, "", 0, 0, status="in_progress")
-            yield _sse(
-                {"type": "response.created", "response": created}, event="response.created"
+            # One counter for the whole stream. The SDK's event models require
+            # sequence_number on every event, so it is not optional.
+            counter = count()
+
+            def event(name: str, payload: dict) -> str:
+                return _sse(
+                    {"type": name, "sequence_number": next(counter), **payload},
+                    event=name,
+                )
+
+            def envelope(text: str, status: str, usage: Completion | None) -> dict:
+                return stream_response_envelope(
+                    response_id,
+                    body.model,
+                    text,
+                    usage.input_tokens if usage else 0,
+                    usage.output_tokens if usage else 0,
+                    status,
+                    item_id,
+                )
+
+            yield event(
+                "response.created",
+                {"response": envelope("", "in_progress", None)},
             )
+            yield event(
+                "response.output_item.added",
+                {"output_index": 0, "item": message_item(item_id, "", "in_progress")},
+            )
+            yield event(
+                "response.content_part.added",
+                {
+                    "item_id": item_id,
+                    "output_index": 0,
+                    "content_index": 0,
+                    "part": output_text_part(""),
+                },
+            )
+
             for delta in collector:
-                yield _sse(
+                yield event(
+                    "response.output_text.delta",
                     {
-                        "type": "response.output_text.delta",
-                        "response_id": response_id,
                         "item_id": item_id,
                         "output_index": 0,
                         "content_index": 0,
                         "delta": delta,
+                        # Required by the SDK's model; this gateway does not
+                        # support logprobs, so the list is empty.
+                        "logprobs": [],
                     },
-                    event="response.output_text.delta",
                 )
+
+            text = collector.text
             usage = collector.usage
-            final = response_body(
-                response_id,
-                body.model,
-                collector.text,
-                usage.input_tokens if usage else 0,
-                usage.output_tokens if usage else 0,
-            )
-            yield _sse(
+
+            yield event(
+                "response.output_text.done",
                 {
-                    "type": "response.output_text.done",
-                    "response_id": response_id,
                     "item_id": item_id,
-                    "text": collector.text,
+                    "output_index": 0,
+                    "content_index": 0,
+                    "text": text,
+                    "logprobs": [],
                 },
-                event="response.output_text.done",
             )
-            yield _sse(
-                {"type": "response.completed", "response": final}, event="response.completed"
+            yield event(
+                "response.content_part.done",
+                {
+                    "item_id": item_id,
+                    "output_index": 0,
+                    "content_index": 0,
+                    "part": output_text_part(text),
+                },
             )
+            yield event(
+                "response.output_item.done",
+                {"output_index": 0, "item": message_item(item_id, text, "completed")},
+            )
+            yield event(
+                "response.completed",
+                {"response": envelope(text, "completed", usage)},
+            )
+
             charge(key, body.model, usage)
-            remember(collector.text)
+            remember(text)
 
         return StreamingResponse(frames(), media_type=SSE_MEDIA_TYPE, headers=SSE_HEADERS)
 

@@ -74,11 +74,18 @@ def chat_completion_body(
 
 def chat_chunk_body(
     completion_id: str, model: str, delta: str | None = None,
-    finish_reason: str | None = None,
+    finish_reason: str | None = None, include_role: bool = False,
 ) -> dict:
+    """One chat.completion.chunk.
+
+    `include_role` belongs to the first chunk only: OpenAI sends the role once
+    at the start of a stream, not on every delta.
+    """
     choice: dict[str, Any] = {"index": 0, "delta": {}, "finish_reason": finish_reason}
+    if include_role:
+        choice["delta"]["role"] = "assistant"
     if delta is not None:
-        choice["delta"] = {"role": "assistant", "content": delta}
+        choice["delta"]["content"] = delta
     return {
         "id": completion_id,
         "object": "chat.completion.chunk",
@@ -88,25 +95,46 @@ def chat_chunk_body(
     }
 
 
+def message_item(item_id: str, text: str, status: str) -> dict:
+    """The assistant message item that carries the output text.
+
+    An empty `text` yields an empty content list, which is what the item looks
+    like before any delta has arrived.
+    """
+    return {
+        "type": "message",
+        "id": item_id,
+        "role": "assistant",
+        "status": status,
+        "content": (
+            [{"type": "output_text", "text": text, "annotations": []}] if text else []
+        ),
+    }
+
+
+def output_text_part(text: str) -> dict:
+    """The content part referenced by content_part.added and .done."""
+    return {"type": "output_text", "text": text, "annotations": []}
+
+
 def response_body(
     response_id: str, model: str, text: str, input_tokens: int, output_tokens: int,
     status: str = "completed",
+    item_id: str | None = None,
 ) -> dict:
+    """The response object both the endpoint and the stream events carry.
+
+    `item_id` pins the message item's id. The streaming path passes one so the
+    same id appears in every event; omitting it mints a fresh one, which is
+    what the non-streaming path does and is unchanged.
+    """
     return {
         "id": response_id,
         "object": "response",
         "created_at": int(time.time()),
         "status": status,
         "model": model,
-        "output": [
-            {
-                "type": "message",
-                "id": new_id("msg_"),
-                "role": "assistant",
-                "status": status,
-                "content": [{"type": "output_text", "text": text, "annotations": []}],
-            }
-        ],
+        "output": [message_item(item_id or new_id("msg_"), text, status)],
         "output_text": text,
         "usage": {
             "input_tokens": input_tokens,
@@ -114,3 +142,22 @@ def response_body(
             "total_tokens": input_tokens + output_tokens,
         },
     }
+
+
+# Fields the SDK's Response model requires that the plain body above does not
+# carry. They are added only to the object embedded in stream events, so the
+# non-streaming response body is left exactly as it was.
+def stream_response_envelope(
+    response_id: str, model: str, text: str, input_tokens: int, output_tokens: int,
+    status: str, item_id: str,
+) -> dict:
+    body = response_body(
+        response_id, model, text, input_tokens, output_tokens, status, item_id
+    )
+    # This gateway does not support tools, so these are honest constants.
+    body["parallel_tool_calls"] = False
+    body["tool_choice"] = "none"
+    body["tools"] = []
+    body["usage"]["input_tokens_details"] = {"cached_tokens": 0, "cache_write_tokens": 0}
+    body["usage"]["output_tokens_details"] = {"reasoning_tokens": 0}
+    return body

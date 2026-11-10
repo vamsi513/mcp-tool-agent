@@ -965,13 +965,40 @@ Two limits worth knowing:
 
 ## Streaming formats
 
-Each endpoint streams in its own shape, which the tests assert are distinct:
+Each endpoint streams in its own shape, which the tests assert are distinct.
 
-- `/v1/chat/completions` emits unnamed `data:` frames of
-  `chat.completion.chunk` objects, then `data: [DONE]`.
-- `/v1/responses` emits named events: `response.created`, repeated
-  `response.output_text.delta`, `response.output_text.done`, and
-  `response.completed` carrying the final response with usage.
+`/v1/chat/completions` emits unnamed `data:` frames of `chat.completion.chunk`
+objects, then `data: [DONE]`. The `role` is sent once, in the first chunk; the
+chunks after it carry `content` only, and the last carries `finish_reason`.
+
+`/v1/responses` emits these named events, in this order:
+
+| # | Event |
+|---|---|
+| 1 | `response.created` |
+| 2 | `response.output_item.added` |
+| 3 | `response.content_part.added` |
+| 4 | `response.output_text.delta` (one per delta, repeated) |
+| 5 | `response.output_text.done` |
+| 6 | `response.content_part.done` |
+| 7 | `response.output_item.done` |
+| 8 | `response.completed` |
+
+Every event carries a `sequence_number`, consecutive from 0, and one stable
+message item id appears in all of them — in `response.created` and
+`response.completed` as `response.output[0].id`, and elsewhere as `item_id`.
+`sequence_number` is not optional: the installed `openai` package's
+stream-event models declare it as a required field, and
+`tests/test_gateway_responses_stream.py` parses every event this gateway emits
+through those models offline, so the events are checked against the SDK rather
+than assumed to match it. `logprobs` is sent as an empty list on the delta and
+done events for the same reason; this gateway does not support logprobs.
+
+The response object embedded in `response.created` and `response.completed`
+carries the extra fields the SDK's `Response` model requires
+(`parallel_tool_calls`, `tool_choice`, `tools`, and the two usage detail
+objects). The non-streaming `/v1/responses` body does **not** carry them and is
+unchanged.
 
 ## Benchmark
 

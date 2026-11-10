@@ -19,3 +19,6 @@ prices.yaml
 
 # scratch database written while recording fixtures
 tests/fixtures/_record_scratch.db*
+
+# holds API key secrets
+gateway.yaml

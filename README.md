@@ -852,3 +852,173 @@ identically three times.
   `strftime`) is the part that would need rewriting to move.
 - **Reviews are counted as submitted**, including `COMMENTED` ones, so
   `review_count` is review events rather than approvals.
+
+---
+
+# LLM gateway
+
+An optional HTTP service that accepts OpenAI-shaped `/v1/chat/completions` and
+`/v1/responses` requests, translates them to OpenAI or Anthropic, keeps session
+state so `previous_response_id` works against both, and enforces a monthly
+budget per API key using the metering already in this repository.
+
+**Off by default.** Nothing in the agent, the MCP servers or the delivery
+metrics changes unless the gateway is started. See
+[docs/gateway-design.md](docs/gateway-design.md) for what it reuses and the
+conflicts found while building it.
+
+## Running it
+
+```bash
+cp gateway.example.yaml gateway.yaml      # then edit; gateway.yaml is gitignored
+export OPENAI_API_KEY=...                 # only for the providers you route to
+export ANTHROPIC_API_KEY=...
+uvicorn gateway.app:create_app --factory --host 127.0.0.1 --port 8080
+```
+
+```bash
+curl -s localhost:8080/healthz
+
+curl -s localhost:8080/v1/chat/completions \
+  -H 'Authorization: Bearer <a key from gateway.yaml>' \
+  -H 'content-type: application/json' \
+  -d '{"model":"gpt-4o-mini","messages":[{"role":"user","content":"hello"}]}'
+```
+
+## What it supports
+
+| | |
+|---|---|
+| Endpoints | `POST /v1/chat/completions`, `POST /v1/responses`, `GET /healthz` |
+| Providers | OpenAI and Anthropic, plus an in-process fake for tests and the benchmark |
+| Request fields | `model`, `messages` / `input`, `instructions`, `previous_response_id`, `temperature`, `max_tokens` / `max_output_tokens`, `stream` |
+| Content | Text only. A string, or a list of content parts whose text is concatenated in order |
+| Streaming | SSE on both endpoints, text deltas, each in its own event format |
+| Sessions | SQLite by default, Redis optional, with a TTL |
+| Budgets | A monthly estimate per key; over it is `429` with code `budget_exceeded` |
+| Routing | By model prefix, from config; the first matching prefix wins |
+
+Usage is recorded through the repository's existing meter, so gateway traffic
+shows up in `python govctl.py usage --group user` under the key's `id`.
+
+### What it does not support
+
+Tools and function calling, images and any other non-text content, batch
+endpoints, embeddings, prompt caching, context compaction, `n > 1`, logprobs,
+structured-output `response_format`, and Anthropic's extended thinking. These
+are **refused with a 400**, not silently dropped, so a caller never gets an
+answer that looks as though the field had been honoured.
+
+Only what the tests cover is claimed. The providers are exercised against
+recorded wire bodies through a mock transport, not against the live APIs, so
+"compatible with OpenAI" here means "matches the request and response shapes
+these tests assert".
+
+## The Anthropic mapping
+
+Four rules, each a pure function in `gateway/translate.py` with its own tests:
+
+- `system` messages and `/v1/responses` `instructions` are hoisted to
+  Anthropic's top-level `system` field. Instructions come first, then system
+  turns in order, joined by a blank line.
+- Consecutive turns with the same role are merged, because Anthropic requires
+  user and assistant to alternate. Their text is joined by a blank line.
+- `max_tokens` is required by Anthropic, so a request that omits it gets
+  `defaults.max_tokens` from config.
+- `stop_reason` maps back to `finish_reason`: `end_turn` to `stop`,
+  `max_tokens` to `length`. An unrecognised value falls back to `stop` rather
+  than inventing one.
+
+## Sessions
+
+`/v1/responses` stores the conversation under the response id it returns, so
+`previous_response_id` continues it — including on Anthropic, which has no
+server-side conversation of its own. An unknown or expired id is a `404` with
+code `response_not_found`.
+
+Backends are behind one interface. SQLite is the default and shares the
+database the audit log and meter use. Redis is optional, for running more than
+one gateway process; it uses Redis's own TTL.
+
+## Budgets and cost
+
+`monthly_budget_usd` per key. Spend is **not** counted twice: the gateway
+writes one `usage_llm` row per upstream call through the existing
+`metering.record_llm_turn`, and month-to-date spend is read back out of those
+rows. There is one source of truth.
+
+**Every cost figure is an estimate.** It is the recorded token counts
+multiplied by whatever is in the configured price table, and the committed
+`prices.example.yaml` is all zeros on purpose, so a budget built on it can
+never be exceeded. Fill in `prices.yaml` from your provider's current pricing
+before relying on a budget.
+
+Two limits worth knowing:
+
+- A cost is not knowable before a call, so the check is against spend already
+  recorded. A key can therefore overshoot its budget by **at most one
+  request**.
+- When an upstream reports no usage for a streamed response, the gateway
+  records a zero row and logs that it did, rather than inventing numbers. That
+  under-counts spend for that request.
+
+## Streaming formats
+
+Each endpoint streams in its own shape, which the tests assert are distinct:
+
+- `/v1/chat/completions` emits unnamed `data:` frames of
+  `chat.completion.chunk` objects, then `data: [DONE]`.
+- `/v1/responses` emits named events: `response.created`, repeated
+  `response.output_text.delta`, `response.output_text.done`, and
+  `response.completed` carrying the final response with usage.
+
+## Benchmark
+
+`scripts/bench_gateway.py` measures the gateway's own overhead against a fake
+provider with a fixed delay, so the difference is request parsing, routing, the
+budget read, the provider call, the session write and the response build.
+
+```bash
+python scripts/bench_gateway.py --requests 200 --delay-ms 5 --endpoint chat
+```
+
+Measured on one machine over loopback, 200 requests after 20 warmup, with a
+5 ms fake provider delay:
+
+```
+endpoint            /v1/chat/completions
+round trip P50      9.802 ms
+round trip P95      11.824 ms
+gateway added P50   4.802 ms
+gateway added P95   6.824 ms
+
+endpoint            /v1/responses
+round trip P50      9.619 ms
+round trip P95      10.065 ms
+gateway added P50   4.619 ms
+gateway added P95   5.065 ms
+```
+
+**This is one machine on loopback.** It is not a provider latency
+measurement, not a throughput or concurrency measurement, and says nothing
+about behaviour under load. Each request includes a SQLite budget read and a
+usage write, and `/v1/responses` also writes a session row. Re-run the script
+rather than trusting these numbers on different hardware.
+
+## Tests
+
+Every gateway test uses the in-process fake provider or a mock transport, so
+none reaches a provider or the network.
+
+```bash
+pytest -q tests/test_gateway_translate.py tests/test_gateway_endpoints.py \
+         tests/test_gateway_providers.py tests/test_gateway_sessions.py \
+         tests/test_gateway_budgets.py tests/test_gateway_config.py \
+         tests/test_gateway_bench.py
+```
+
+The Redis session tests need a reachable Redis and skip themselves without
+one. CI runs them in a second job against a `redis:8-alpine` service
+container, where a skip is treated as a failure so a broken container cannot
+pass quietly. The existing CI job's steps are unchanged apart from adding the
+new modules to the type check and the new config file to the parse check.

@@ -29,7 +29,8 @@ jobs:
                governed_server.py metering.py govctl.py \
                delivery_ingest.py delivery_metrics.py delivery_tools.py \
                delivery_graphql.py delivery_fixtures.py \
-               evals/run_evals.py evals/stub_github.py
+               evals/run_evals.py evals/stub_github.py \
+               gateway/ scripts/bench_gateway.py
       - name: Seed the sample database
         run: python seed_books.py
       - name: Check the committed policy and price files parse
@@ -37,6 +38,7 @@ jobs:
           python -c "import policy; policy.load_policy('policy.example.yaml')"
           python -c "import metering; metering.load_prices('prices.example.yaml')"
           python -c "import yaml; yaml.safe_load(open('evals/delivery_questions.yaml'))"
+          python -c "import gateway.config as c; c.load_config('gateway.example.yaml')"
       # The suite runs the evaluation harness in fake mode against a local
       # stub, and the delivery tests replay recorded GitHub responses through
       # a MockTransport, so nothing here reaches github.com or an LLM
@@ -44,3 +46,41 @@ jobs:
       # which CI does not set, and neither real-model eval is invoked here.
       - name: Run tests
         run: pytest -q --cov --cov-report=term-missing
+
+  gateway-redis:
+    # The session tests that need a real Redis. Everything else runs in the
+    # job above with no services, so the Redis tests skip themselves there.
+    runs-on: ubuntu-latest
+    services:
+      redis:
+        image: redis:8-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+      - name: Confirm Redis is reachable
+        run: python -c "import redis; redis.Redis.from_url('redis://127.0.0.1:6379/15').ping()"
+      - name: Seed the sample database
+        run: python seed_books.py
+      # -k redis selects the Redis-backed session tests; they are the only
+      # ones that need the service. A skip here would hide a broken service
+      # container, so a skip is treated as a failure.
+      - name: Run the Redis session tests
+        run: |
+          pytest tests/test_gateway_sessions.py -k redis -q | tee /tmp/redis.txt
+          if grep -q skipped /tmp/redis.txt; then
+            echo "Redis tests skipped; the service container was not reachable" >&2
+            exit 1
+          fi

@@ -42,6 +42,46 @@ def test_healthz_touches_no_provider(client):
     assert fake.calls == []
 
 
+def test_healthz_has_exactly_one_field(client):
+    test_client, _ = client
+    body = test_client.get("/healthz").json()
+    assert body == {"status": "ok"}
+    assert list(body) == ["status"]
+
+
+def test_healthz_exposes_no_configuration(governance_db):
+    """Liveness must not tell an unauthenticated caller how this is set up.
+
+    Built with distinctive config, as for the root route, so a leak would be
+    unmistakable.
+    """
+    app, _ = build(
+        governance_db,
+        budget=123.456,
+        routes=(Route("secret-prefix-", "fake"),),
+        providers={"fake": FakeProvider(reply="x")},
+    )
+    with TestClient(app) as test_client:
+        response = test_client.get("/healthz")
+
+    assert response.json() == {"status": "ok"}
+    text = response.text
+    for leak in (
+        KEY,                 # the API key
+        "secret-prefix-",    # a configured model prefix
+        "123.456",           # a budget
+        "sqlite",            # the session backend
+        "redis",
+        "fake",              # a provider name
+        "anthropic",
+        "openai",
+        "routes",
+        "providers",
+        "session_backend",
+    ):
+        assert leak not in text, f"the healthz body leaked {leak!r}"
+
+
 # --- / ----------------------------------------------------------------
 
 

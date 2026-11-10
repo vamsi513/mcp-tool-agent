@@ -137,12 +137,13 @@ def create_app(
 
     @app.get("/healthz")
     def healthz() -> dict:
-        return {
-            "status": "ok",
-            "providers": sorted(provider_map),
-            "session_backend": getattr(sessions, "backend", "unknown"),
-            "routes": [{"prefix": r.prefix, "provider": r.provider} for r in settings.routes],
-        }
+        """Liveness only.
+
+        Unauthenticated, so it says nothing about how this instance is set
+        up: no provider names, session backend, routes or model prefixes.
+        It reads neither the config nor the provider map.
+        """
+        return {"status": "ok"}
 
     @app.get("/")
     def root() -> dict:

@@ -266,12 +266,11 @@ def test_unsupported_responses_fields_are_refused(client, field, value):
 # --- health -----------------------------------------------------------
 
 
-def test_healthz_reports_the_wiring(client):
+def test_healthz_reports_liveness_only(client):
     test_client, _ = client
-    body = test_client.get("/healthz").json()
-    assert body["status"] == "ok"
-    assert body["session_backend"] == "sqlite"
-    assert {"prefix": "fake-", "provider": "fake"} in body["routes"]
+    response = test_client.get("/healthz")
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
 
 
 # --- streaming --------------------------------------------------------

@@ -13,6 +13,8 @@ dependencies = [
     "python-dotenv==1.2.3",
     "PyYAML==6.0.3",
     "graphql-core==3.2.6",
+    "fastapi==0.122.0",
+    "redis==7.1.0",
 ]
 
 [project.scripts]
@@ -23,6 +25,7 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
+packages = ["gateway", "gateway.providers"]
 py-modules = [
     "agent",
     "server",
@@ -68,4 +71,5 @@ source = [
     "delivery_tools",
     "delivery_graphql",
     "delivery_fixtures",
+    "gateway",
 ]

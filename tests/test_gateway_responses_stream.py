@@ -72,14 +72,26 @@ def test_one_stable_item_id_across_every_event(streamed):
     assert len(item_ids(events)) == 1
 
 
-def test_the_item_id_appears_in_created_deltas_done_and_completed(streamed):
+def test_created_carries_no_output_item(streamed):
+    """The item first appears in output_item.added, as the API does it."""
+    events, _, _ = streamed
+    created = next(
+        entry["data"] for entry in events if entry["data"]["type"] == "response.created"
+    )
+    assert created["response"]["output"] == []
+
+
+def test_the_item_id_appears_in_added_deltas_done_and_completed(streamed):
     events, _, _ = streamed
     by_type = {entry["data"]["type"]: entry["data"] for entry in events}
     the_id = item_ids(events).pop()
 
-    assert by_type["response.created"]["response"]["output"][0]["id"] == the_id
+    assert by_type["response.output_item.added"]["item"]["id"] == the_id
+    assert by_type["response.content_part.added"]["item_id"] == the_id
     assert by_type["response.output_text.delta"]["item_id"] == the_id
     assert by_type["response.output_text.done"]["item_id"] == the_id
+    assert by_type["response.content_part.done"]["item_id"] == the_id
+    assert by_type["response.output_item.done"]["item"]["id"] == the_id
     assert by_type["response.completed"]["response"]["output"][0]["id"] == the_id
 
 

@@ -121,12 +121,17 @@ def response_body(
     response_id: str, model: str, text: str, input_tokens: int, output_tokens: int,
     status: str = "completed",
     item_id: str | None = None,
+    with_item: bool = True,
 ) -> dict:
     """The response object both the endpoint and the stream events carry.
 
     `item_id` pins the message item's id. The streaming path passes one so the
     same id appears in every event; omitting it mints a fresh one, which is
-    what the non-streaming path does and is unchanged.
+    what the non-streaming path does.
+
+    `with_item=False` yields an empty `output`, which is what
+    `response.created` looks like: the item first appears in
+    `response.output_item.added`.
     """
     return {
         "id": response_id,
@@ -134,7 +139,9 @@ def response_body(
         "created_at": int(time.time()),
         "status": status,
         "model": model,
-        "output": [message_item(item_id or new_id("msg_"), text, status)],
+        "output": (
+            [message_item(item_id or new_id("msg_"), text, status)] if with_item else []
+        ),
         "output_text": text,
         "usage": {
             "input_tokens": input_tokens,
@@ -149,10 +156,11 @@ def response_body(
 # non-streaming response body is left exactly as it was.
 def stream_response_envelope(
     response_id: str, model: str, text: str, input_tokens: int, output_tokens: int,
-    status: str, item_id: str,
+    status: str, item_id: str, with_item: bool = True,
 ) -> dict:
     body = response_body(
-        response_id, model, text, input_tokens, output_tokens, status, item_id
+        response_id, model, text, input_tokens, output_tokens, status, item_id,
+        with_item=with_item,
     )
     # This gateway does not support tools, so these are honest constants.
     body["parallel_tool_calls"] = False

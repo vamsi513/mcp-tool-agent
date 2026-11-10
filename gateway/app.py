@@ -316,7 +316,9 @@ def create_app(
                     event=name,
                 )
 
-            def envelope(text: str, status: str, usage: Completion | None) -> dict:
+            def envelope(
+                text: str, status: str, usage: Completion | None, with_item: bool = True
+            ) -> dict:
                 return stream_response_envelope(
                     response_id,
                     body.model,
@@ -325,11 +327,14 @@ def create_app(
                     usage.output_tokens if usage else 0,
                     status,
                     item_id,
+                    with_item=with_item,
                 )
 
+            # Empty output: the message item first appears in
+            # response.output_item.added, as the API does it.
             yield event(
                 "response.created",
-                {"response": envelope("", "in_progress", None)},
+                {"response": envelope("", "in_progress", None, with_item=False)},
             )
             yield event(
                 "response.output_item.added",

@@ -889,7 +889,8 @@ curl -s localhost:8080/v1/chat/completions \
 
 | | |
 |---|---|
-| Endpoints | `POST /v1/chat/completions`, `POST /v1/responses`, `GET /healthz` |
+| Endpoints | `POST /v1/chat/completions`, `POST /v1/responses` |
+| Unauthenticated | `GET /healthz` for a health check returning `status: ok`, `GET /` listing the supported paths, and `GET /favicon.ico` returning 204, so a browser or a probe does not get a 404 |
 | Providers | OpenAI and Anthropic, plus an in-process fake for tests and the benchmark |
 | Request fields | `model`, `messages` / `input`, `instructions`, `previous_response_id`, `temperature`, `max_tokens` / `max_output_tokens`, `stream` |
 | Content | Text only. A string, or a list of content parts whose text is concatenated in order |

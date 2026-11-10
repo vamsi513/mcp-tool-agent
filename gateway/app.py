@@ -13,7 +13,7 @@ from collections.abc import Iterator
 from typing import Any
 
 from fastapi import FastAPI, Header, Request
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import JSONResponse, Response, StreamingResponse
 
 import metering
 from gateway import budgets, errors
@@ -39,6 +39,12 @@ logger = logging.getLogger("gateway")
 
 SSE_MEDIA_TYPE = "text/event-stream"
 SSE_HEADERS = {"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
+
+# Constants, not configuration. The root route must not leak anything about
+# how this instance is set up, so it reads neither the config nor the
+# provider map.
+SERVICE_NAME = "mcp-tool-agent llm gateway"
+SUPPORTED_PATHS = ("/v1/chat/completions", "/v1/responses", "/healthz")
 
 
 def _sse(data: dict, event: str | None = None) -> str:
@@ -137,6 +143,21 @@ def create_app(
             "session_backend": getattr(sessions, "backend", "unknown"),
             "routes": [{"prefix": r.prefix, "provider": r.provider} for r in settings.routes],
         }
+
+    @app.get("/")
+    def root() -> dict:
+        """What this service is and which paths it answers on.
+
+        Unauthenticated, and deliberately static: no key, config value, model
+        name or provider detail appears here. A browser hitting the root
+        should not get a 404, and should not learn anything either.
+        """
+        return {"service": SERVICE_NAME, "paths": list(SUPPORTED_PATHS)}
+
+    @app.get("/favicon.ico", status_code=204, response_class=Response)
+    def favicon() -> Response:
+        """Browsers ask for this unprompted; answer empty rather than 404."""
+        return Response(status_code=204)
 
     # ------------------------------------------------------- chat completions
 

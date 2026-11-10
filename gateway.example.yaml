@@ -15,6 +15,8 @@ routes:
     provider: openai
   - prefix: "o3"
     provider: openai
+  - prefix: "o4"
+    provider: openai
   - prefix: "claude-"
     provider: anthropic
   # Used by the tests and scripts/bench_gateway.py. Harmless to leave in: it

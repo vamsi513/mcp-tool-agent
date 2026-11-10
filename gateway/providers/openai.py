@@ -21,6 +21,20 @@ from gateway.translate import content_to_text
 DEFAULT_BASE_URL = "https://api.openai.com/v1"
 TIMEOUT_SECONDS = 120
 
+# Model families that take max_completion_tokens on the chat completions
+# endpoint rather than max_tokens. Matched on the start of the model name.
+REASONING_MODEL_PREFIXES = ("gpt-5", "o1", "o3", "o4")
+
+
+def is_reasoning_model(model: str) -> bool:
+    """True when the upstream expects max_completion_tokens for this model."""
+    return model.startswith(REASONING_MODEL_PREFIXES)
+
+
+def token_limit_field(model: str) -> str:
+    """The upstream field name for a caller's token limit."""
+    return "max_completion_tokens" if is_reasoning_model(model) else "max_tokens"
+
 
 def http_client(**kwargs: Any) -> httpx.Client:
     """The HTTP client this module uses, in one place.
@@ -67,7 +81,11 @@ def _body(
     if temperature is not None:
         body["temperature"] = temperature
     if max_tokens is not None:
-        body["max_tokens"] = max_tokens
+        # A caller's max_tokens, or a /v1/responses max_output_tokens, goes
+        # upstream under whichever name the model family expects. Temperature
+        # is passed through unchanged; some reasoning models accept only the
+        # default and will refuse another value.
+        body[token_limit_field(model)] = max_tokens
     if stream:
         body["stream"] = True
         body["stream_options"] = {"include_usage": True}

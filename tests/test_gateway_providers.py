@@ -232,3 +232,111 @@ def test_the_patch_does_not_leak_between_tests():
     """After the previous test, both providers must have their real factory."""
     assert openai_provider.http_client.__module__ == openai_provider.__name__
     assert anthropic_provider.http_client.__module__ == anthropic_provider.__name__
+
+
+# --- the token limit field depends on the model family ----------------
+
+
+@pytest.mark.parametrize("model", ["gpt-5", "gpt-5.4-mini", "o1", "o1-mini", "o3",
+                                   "o3-mini", "o4-mini"])
+def test_reasoning_models_get_max_completion_tokens(openai_calls, model):
+    """Recorded request body: the limit travels under the reasoning name."""
+    sent = openai_calls(lambda request: httpx.Response(200, json=openai_chat_body()))
+    openai_provider.OpenAIProvider().complete(
+        model=model, messages=[{"role": "user", "content": "hi"}], max_tokens=64
+    )
+
+    assert sent[0]["max_completion_tokens"] == 64
+    assert "max_tokens" not in sent[0]
+
+
+@pytest.mark.parametrize("model", ["gpt-4o", "gpt-4o-mini", "gpt-4.1", "gpt-3.5-turbo",
+                                   "chatgpt-4o-latest"])
+def test_other_models_keep_max_tokens(openai_calls, model):
+    sent = openai_calls(lambda request: httpx.Response(200, json=openai_chat_body()))
+    openai_provider.OpenAIProvider().complete(
+        model=model, messages=[{"role": "user", "content": "hi"}], max_tokens=64
+    )
+
+    assert sent[0]["max_tokens"] == 64
+    assert "max_completion_tokens" not in sent[0]
+
+
+def test_neither_field_is_sent_when_the_caller_omits_a_limit(openai_calls):
+    sent = openai_calls(lambda request: httpx.Response(200, json=openai_chat_body()))
+    openai_provider.OpenAIProvider().complete(
+        model="gpt-5", messages=[{"role": "user", "content": "hi"}]
+    )
+
+    assert "max_tokens" not in sent[0]
+    assert "max_completion_tokens" not in sent[0]
+
+
+def test_the_mapping_applies_to_a_streamed_request_too(openai_calls):
+    sent = openai_calls(lambda request: httpx.Response(200, text="data: [DONE]\n\n"))
+    list(
+        StreamCollector(
+            openai_provider.OpenAIProvider().stream(
+                model="o3-mini",
+                messages=[{"role": "user", "content": "hi"}],
+                max_tokens=32,
+            )
+        )
+    )
+
+    assert sent[0]["max_completion_tokens"] == 32
+    assert "max_tokens" not in sent[0]
+
+
+def test_temperature_is_passed_through_unchanged_for_reasoning_models(openai_calls):
+    """Temperature handling is deliberately untouched.
+
+    Some reasoning models accept only the default and will refuse another
+    value upstream; the gateway does not second-guess the caller.
+    """
+    sent = openai_calls(lambda request: httpx.Response(200, json=openai_chat_body()))
+    openai_provider.OpenAIProvider().complete(
+        model="gpt-5", messages=[{"role": "user", "content": "hi"}], temperature=0.7
+    )
+
+    assert sent[0]["temperature"] == 0.7
+
+
+@pytest.mark.parametrize(
+    "model, expected",
+    [("gpt-5", "max_completion_tokens"), ("o4-mini", "max_completion_tokens"),
+     ("gpt-4o", "max_tokens")],
+)
+def test_token_limit_field_is_exposed_for_callers(model, expected):
+    assert openai_provider.token_limit_field(model) == expected
+
+
+def test_a_responses_max_output_tokens_reaches_the_reasoning_field(
+    governance_db, monkeypatch
+):
+    """/v1/responses sends max_output_tokens; the upstream chat call renames it."""
+    from fastapi.testclient import TestClient
+
+    from gateway.config import Route
+    from tests.gateway_support import HEADERS, build
+
+    sent = mock_provider_transport(
+        monkeypatch,
+        openai_provider,
+        lambda request: httpx.Response(200, json=openai_chat_body()),
+    )
+    app, _ = build(
+        governance_db,
+        routes=(Route("gpt-5", "openai"),),
+        providers={"openai": openai_provider.OpenAIProvider()},
+    )
+    with TestClient(app) as client:
+        response = client.post(
+            "/v1/responses",
+            headers=HEADERS,
+            json={"model": "gpt-5", "input": "hi", "max_output_tokens": 128},
+        )
+
+    assert response.status_code == 200
+    assert sent[0]["max_completion_tokens"] == 128
+    assert "max_tokens" not in sent[0]

@@ -930,6 +930,34 @@ Four rules, each a pure function in `gateway/translate.py` with its own tests:
   `max_tokens` to `length`. An unrecognised value falls back to `stop` rather
   than inventing one.
 
+## Reasoning models
+
+On the chat completions endpoint, OpenAI's reasoning families take
+`max_completion_tokens` where other models take `max_tokens`. The gateway
+sends whichever the model expects, so a caller always supplies `max_tokens`
+(or `max_output_tokens` on `/v1/responses`) and does not have to know which
+family it is talking to.
+
+| Model name starts with | Upstream field |
+|---|---|
+| `gpt-5`, `o1`, `o3`, `o4` | `max_completion_tokens` |
+| anything else | `max_tokens` |
+
+A `/v1/responses` request's `max_output_tokens` goes through the same mapping,
+because this gateway's OpenAI provider calls chat completions underneath. When
+the caller supplies no limit, neither field is sent.
+
+**`temperature` is passed through unchanged.** Some reasoning models accept
+only the default temperature and will refuse any other value; the gateway does
+not rewrite or drop what the caller asked for, so such a request fails
+upstream and the error surfaces as a 502.
+
+**This mapping is tested on recorded request bodies only, not against the real
+API.** The tests assert which field name the gateway puts on the wire for each
+family; they do not confirm that a given model exists or that an upstream
+accepts the request. The `o4` prefix was added to `gateway.example.yaml` so
+those models are routable at all.
+
 ## Sessions
 
 `/v1/responses` stores the conversation under the response id it returns, so
@@ -984,9 +1012,11 @@ chunks after it carry `content` only, and the last carries `finish_reason`.
 | 7 | `response.output_item.done` |
 | 8 | `response.completed` |
 
-Every event carries a `sequence_number`, consecutive from 0, and one stable
-message item id appears in all of them — in `response.created` and
-`response.completed` as `response.output[0].id`, and elsewhere as `item_id`.
+`response.created` carries `output: []`; the message item first appears in
+`response.output_item.added`. Every event carries a `sequence_number`,
+consecutive from 0, and one stable message item id appears in every event
+after `response.created` — as `item_id`, as `item.id`, and in
+`response.completed` as `response.output[0].id`.
 `sequence_number` is not optional: the installed `openai` package's
 stream-event models declare it as a required field, and
 `tests/test_gateway_responses_stream.py` parses every event this gateway emits
@@ -994,11 +1024,17 @@ through those models offline, so the events are checked against the SDK rather
 than assumed to match it. `logprobs` is sent as an empty list on the delta and
 done events for the same reason; this gateway does not support logprobs.
 
-The response object embedded in `response.created` and `response.completed`
-carries the extra fields the SDK's `Response` model requires
-(`parallel_tool_calls`, `tool_choice`, `tools`, and the two usage detail
-objects). The non-streaming `/v1/responses` body does **not** carry them and is
-unchanged.
+Both the non-streaming `/v1/responses` body and the response object embedded
+in the stream events carry the fields the SDK's `Response` model requires:
+`parallel_tool_calls` (always `false`), `tool_choice` (always `"none"`),
+`tools` (always `[]`) — the gateway has no tools — and the two usage detail
+objects. Tests validate both bodies against that model offline.
+
+**These usage details are always zero: `input_tokens_details.cached_tokens`,
+`input_tokens_details.cache_write_tokens` and
+`output_tokens_details.reasoning_tokens`.** Zero here means the gateway does
+not track the value, not that it measured none. It neither counts prompt
+caching or reasoning tokens itself nor reads them back from an upstream.
 
 ## Benchmark
 

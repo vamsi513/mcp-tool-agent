@@ -950,13 +950,16 @@ the caller supplies no limit, neither field is sent.
 **`temperature` is passed through unchanged.** Some reasoning models accept
 only the default temperature and will refuse any other value; the gateway does
 not rewrite or drop what the caller asked for, so such a request fails
-upstream and the error surfaces as a 502.
+upstream and the error surfaces as a 502. The live run did not exercise this:
+no request in it set a `temperature`.
 
-**This mapping is tested on recorded request bodies only, not against the real
-API.** The tests assert which field name the gateway puts on the wire for each
-family; they do not confirm that a given model exists or that an upstream
-accepts the request. The `o4` prefix was added to `gateway.example.yaml` so
-those models are routable at all.
+The offline tests assert only which field name the gateway puts on the wire
+for each family. One live call on 2026-11-10 confirmed that `gpt-5.4-mini`
+accepts the renamed field: a request carrying `max_tokens: 64` came back as a
+completion rather than an upstream error. The `o1`, `o3` and `o4` families
+have never been called live, so for those the mapping remains an assertion
+about the request body and nothing more. The `o4` prefix was added to
+`gateway.example.yaml` so those models are routable at all.
 
 ## Sessions
 
@@ -998,6 +1001,10 @@ Each endpoint streams in its own shape, which the tests assert are distinct.
 `/v1/chat/completions` emits unnamed `data:` frames of `chat.completion.chunk`
 objects, then `data: [DONE]`. The `role` is sent once, in the first chunk; the
 chunks after it carry `content` only, and the last carries `finish_reason`.
+No chunk carries a `usage` object: `stream_options.include_usage` is not
+implemented, so a streaming chat caller cannot read token counts off the
+stream. The tokens are still metered — they are recorded once the stream
+finishes — so `govctl.py usage` reports them.
 
 `/v1/responses` emits these named events, in this order:
 
@@ -1086,3 +1093,31 @@ one. CI runs them in a second job against a `redis:8-alpine` service
 container, where a skip is treated as a failure so a broken container cannot
 pass quietly. The existing CI job's steps are unchanged apart from adding the
 new modules to the type check and the new config file to the parse check.
+
+## Live verification
+
+The gateway was run once against the real OpenAI and Anthropic APIs on
+2026-11-10, from a throwaway config and a throwaway SQLite database outside
+the repository: 17 upstream calls, each capped at 64 output tokens. The models
+called were `gpt-4o-mini`, `gpt-5.4-mini` and `claude-haiku-4-5-20251001`.
+
+| Run live | Result |
+|---|---|
+| `/v1/chat/completions`, non-streaming | passed on all three models |
+| `max_tokens` on `gpt-5.4-mini` | passed; the `max_completion_tokens` rename is accepted upstream |
+| `/v1/responses`, non-streaming, `instructions` set | passed on `gpt-4o-mini` and `claude-haiku-4-5-20251001`, and both obeyed the instruction |
+| Streaming, both endpoints, both providers | passed; frames arrived spread across the response rather than in one burst, one stable item id per `/v1/responses` stream, clean termination, nonzero final usage on `/v1/responses` |
+| `previous_response_id` chaining | passed on both providers; the second turn recalled a code word set in the first, and its input token count rose, so the history really did go upstream |
+| The `openai` 3.6.0 SDK client, pointed at the gateway | passed; `client.responses.stream` and `client.responses.create` with a chain both ran against `claude-haiku-4-5-20251001` with no validation error |
+| Error shapes | passed; 404 `response_not_found`, 401 `missing_api_key`, 400 `model_not_found`, 429 `budget_exceeded` |
+| Usage accounting | passed; per-key rows with nonzero token counts for every call, the streaming ones included |
+
+That run says nothing about the following, which remain covered by offline
+tests or not at all:
+
+* The `o1`, `o3` and `o4` reasoning families, and the temperature behaviour
+  described under [Reasoning models](#reasoning-models).
+* Anything beyond text. No tools, no images, no structured output.
+* Any client other than `openai` 3.6.0.
+* Concurrency or load. Every call in the run was sequential.
+* Redis-backed sessions. The run used the SQLite backend.

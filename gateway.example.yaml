@@ -1,0 +1,42 @@
+# Gateway configuration.
+#
+# Copy to gateway.yaml and edit. gateway.yaml is gitignored because it holds
+# API key secrets; only this example is committed. The gateway never logs a
+# key: usage rows and log lines carry the key's `id` instead.
+
+version: 1
+
+# Model routing by prefix. The first matching prefix wins, so put the more
+# specific prefixes first. A model matching nothing returns 400.
+routes:
+  - prefix: "gpt-"
+    provider: openai
+  - prefix: "o1"
+    provider: openai
+  - prefix: "o3"
+    provider: openai
+  - prefix: "claude-"
+    provider: anthropic
+  # Used by the tests and scripts/bench_gateway.py. Harmless to leave in: it
+  # never reaches a network.
+  - prefix: "fake-"
+    provider: fake
+
+# Session state for /v1/responses, so previous_response_id works against
+# Anthropic as well as OpenAI.
+sessions:
+  backend: sqlite            # sqlite (default) or redis
+  ttl_seconds: 3600
+  redis_url: "redis://127.0.0.1:6379/0"
+
+defaults:
+  # Anthropic requires max_tokens. A request that omits it gets this.
+  max_tokens: 1024
+
+# Keys the gateway accepts. `id` is what appears in usage rows and logs.
+# monthly_budget_usd is an estimate against the configured price table; omit
+# it for no limit.
+keys:
+  - key: "replace-me-with-a-real-secret"
+    id: "demo"
+    monthly_budget_usd: 5.0

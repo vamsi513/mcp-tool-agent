@@ -48,11 +48,30 @@ class Route:
 
 @dataclass(frozen=True)
 class KeyConfig:
-    """One accepted API key. `secret` is never logged or returned."""
+    """One accepted API key. `secret` is never logged or returned.
+
+    `name` and `created_at` are optional notes for whoever reads the file or
+    runs `python -m gateway.cli keys list`. Nothing in the request path looks
+    at them, and a key written by hand without them works exactly as before.
+    """
 
     id: str
     secret: str
     monthly_budget_usd: float | None = None
+    name: str | None = None
+    created_at: str | None = None
+
+    @property
+    def masked_secret(self) -> str:
+        """The key with everything but its last four characters hidden.
+
+        The only form of an existing key that anything is allowed to print.
+        A key too short to mask is shown as all dots rather than partly
+        revealed.
+        """
+        if len(self.secret) <= 4:
+            return "*" * 8
+        return "*" * 8 + self.secret[-4:]
 
     def __repr__(self) -> str:  # keeps a stray repr from leaking the secret
         return f"KeyConfig(id={self.id!r}, monthly_budget_usd={self.monthly_budget_usd!r})"
@@ -148,7 +167,19 @@ def parse_config(raw: Any) -> GatewayConfig:
                 raise ConfigError(f"keys[{index}].monthly_budget_usd must not be negative")
         if secret in keys:
             raise ConfigError(f"keys[{index}].key is a duplicate")
-        keys[secret] = KeyConfig(id=identifier, secret=secret, monthly_budget_usd=budget)
+        name = entry.get("name")
+        if name is not None and not isinstance(name, str):
+            raise ConfigError(f"keys[{index}].name must be a string")
+        created_at = entry.get("created_at")
+        if created_at is not None and not isinstance(created_at, str):
+            raise ConfigError(f"keys[{index}].created_at must be a string")
+        keys[secret] = KeyConfig(
+            id=identifier,
+            secret=secret,
+            monthly_budget_usd=budget,
+            name=name,
+            created_at=created_at,
+        )
 
     sessions_raw = _mapping(document.get("sessions"), "sessions")
     backend = sessions_raw.get("backend", "sqlite")

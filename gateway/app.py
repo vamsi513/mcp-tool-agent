@@ -57,6 +57,23 @@ def _sse(data: dict, event: str | None = None) -> str:
     return f"{prefix}data: {json.dumps(data)}\n\n"
 
 
+def _released_after(
+    frames: Iterator[str], admission: budgets.Admission
+) -> Iterator[str]:
+    """Stream `frames`, then give the key's budget window back.
+
+    A streamed request holds its window until the charge is written, which
+    happens in the last frame. The `finally` also runs when a client hangs
+    up, because closing a generator raises GeneratorExit at the yield it is
+    parked on; without it one abandoned stream would block every later
+    request on that key.
+    """
+    try:
+        yield from frames
+    finally:
+        admission.release()
+
+
 def default_providers(config: GatewayConfig) -> dict[str, Provider]:
     return {
         "openai": OpenAIProvider(),
@@ -93,6 +110,10 @@ def create_app(
     app.state.prices = price_table
     app.state.sessions = sessions
     app.state.db = db
+
+    # Per app instance, so two apps built in one process never share a lock.
+    gate = budgets.AdmissionGate()
+    app.state.admission = gate
 
     def authorise(authorization: str | None) -> KeyConfig:
         if not authorization:
@@ -179,7 +200,6 @@ def create_app(
         if not body.messages:
             raise errors.bad_request("messages must not be empty", param="messages")
         _, provider = route(body.model)
-        enforce_budget(key, body.model, "/v1/chat/completions")
 
         messages = [
             {"role": m.get("role", "user"), "content": content_to_text(m.get("content"))}
@@ -188,13 +208,17 @@ def create_app(
         completion_id = new_id("chatcmpl-")
 
         if not body.stream:
-            result = provider.complete(
-                model=body.model,
-                messages=messages,
-                temperature=body.temperature,
-                max_tokens=body.max_tokens,
-            )
-            charge(key, body.model, result)
+            # Checked and charged inside one window, so parallel requests on
+            # a budgeted key cannot all read the same spend and all pass.
+            with gate.admit(key):
+                enforce_budget(key, body.model, "/v1/chat/completions")
+                result = provider.complete(
+                    model=body.model,
+                    messages=messages,
+                    temperature=body.temperature,
+                    max_tokens=body.max_tokens,
+                )
+                charge(key, body.model, result)
             return chat_completion_body(
                 completion_id,
                 result.model or body.model,
@@ -204,14 +228,26 @@ def create_app(
                 result.output_tokens,
             )
 
-        collector = StreamCollector(
-            provider.stream(
-                model=body.model,
-                messages=messages,
-                temperature=body.temperature,
-                max_tokens=body.max_tokens,
+        # The window has to outlive this function: the upstream call happens
+        # while the frames are being produced, and the charge is written at
+        # the end of them. frames() releases it in a finally, which runs on
+        # a client disconnect too, because closing the generator raises
+        # GeneratorExit at the yield it is parked on.
+        admission = gate.admit(key)
+        admission.acquire()
+        try:
+            enforce_budget(key, body.model, "/v1/chat/completions")
+            collector = StreamCollector(
+                provider.stream(
+                    model=body.model,
+                    messages=messages,
+                    temperature=body.temperature,
+                    max_tokens=body.max_tokens,
+                )
             )
-        )
+        except BaseException:
+            admission.release()
+            raise
 
         def frames() -> Iterator[str]:
             # The role is sent once, at the start, as OpenAI does; the delta
@@ -232,7 +268,11 @@ def create_app(
             yield "data: [DONE]\n\n"
             charge(key, body.model, usage)
 
-        return StreamingResponse(frames(), media_type=SSE_MEDIA_TYPE, headers=SSE_HEADERS)
+        return StreamingResponse(
+            _released_after(frames(), admission),
+            media_type=SSE_MEDIA_TYPE,
+            headers=SSE_HEADERS,
+        )
 
     # ------------------------------------------------------------- responses
 
@@ -245,7 +285,6 @@ def create_app(
         key = authorise(authorization)
         reject_unsupported(body.model_extra or {}, UNSUPPORTED_RESPONSES_FIELDS)
         provider_name, provider = route(body.model)
-        enforce_budget(key, body.model, "/v1/responses")
 
         history: list[dict] = []
         instructions = body.instructions or ""
@@ -277,14 +316,16 @@ def create_app(
             )
 
         if not body.stream:
-            result = provider.complete(
-                model=body.model,
-                messages=messages,
-                temperature=body.temperature,
-                max_tokens=body.max_output_tokens,
-                extra_system=instructions,
-            )
-            charge(key, body.model, result)
+            with gate.admit(key):
+                enforce_budget(key, body.model, "/v1/responses")
+                result = provider.complete(
+                    model=body.model,
+                    messages=messages,
+                    temperature=body.temperature,
+                    max_tokens=body.max_output_tokens,
+                    extra_system=instructions,
+                )
+                charge(key, body.model, result)
             remember(result.text)
             return response_body(
                 response_id,
@@ -294,15 +335,24 @@ def create_app(
                 result.output_tokens,
             )
 
-        collector = StreamCollector(
-            provider.stream(
-                model=body.model,
-                messages=messages,
-                temperature=body.temperature,
-                max_tokens=body.max_output_tokens,
-                extra_system=instructions,
+        # Held until the charge at the end of frames(); see the note on the
+        # chat endpoint for why it is released there rather than here.
+        admission = gate.admit(key)
+        admission.acquire()
+        try:
+            enforce_budget(key, body.model, "/v1/responses")
+            collector = StreamCollector(
+                provider.stream(
+                    model=body.model,
+                    messages=messages,
+                    temperature=body.temperature,
+                    max_tokens=body.max_output_tokens,
+                    extra_system=instructions,
+                )
             )
-        )
+        except BaseException:
+            admission.release()
+            raise
         item_id = new_id("msg_")
 
         def frames() -> Iterator[str]:
@@ -398,7 +448,11 @@ def create_app(
             charge(key, body.model, usage)
             remember(text)
 
-        return StreamingResponse(frames(), media_type=SSE_MEDIA_TYPE, headers=SSE_HEADERS)
+        return StreamingResponse(
+            _released_after(frames(), admission),
+            media_type=SSE_MEDIA_TYPE,
+            headers=SSE_HEADERS,
+        )
 
     @app.exception_handler(errors.GatewayError)
     def gateway_error_handler(request: Request, exc: errors.GatewayError) -> JSONResponse:

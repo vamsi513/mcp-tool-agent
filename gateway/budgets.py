@@ -13,8 +13,10 @@ from __future__ import annotations
 
 import logging
 import os
+import threading
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from types import TracebackType
 from typing import Any
 
 import metering
@@ -97,6 +99,88 @@ def record(
         output_tokens=output_tokens,
         db=db,
     )
+
+
+class Admission:
+    """One held check-and-charge window, or nothing at all.
+
+    Releasing more than once is harmless; never releasing would hold the
+    key's lock forever, so every caller releases in a `finally` or by using
+    this as a context manager.
+    """
+
+    __slots__ = ("_lock", "_held")
+
+    def __init__(self, lock: threading.Lock | None) -> None:
+        self._lock = lock
+        self._held = False
+
+    @property
+    def held(self) -> bool:
+        return self._held
+
+    def acquire(self) -> None:
+        if self._lock is not None and not self._held:
+            self._lock.acquire()
+            self._held = True
+
+    def release(self) -> None:
+        if self._lock is not None and self._held:
+            self._held = False
+            self._lock.release()
+
+    def __enter__(self) -> Admission:
+        self.acquire()
+        return self
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
+    ) -> None:
+        self.release()
+
+
+class AdmissionGate:
+    """Keeps a key's budget check and its charge from coming apart.
+
+    `check` reads month-to-date spend back out of the usage rows and
+    `record` writes the row for a call, with the upstream call in between.
+    Nothing tied the two together, so requests arriving at once all read the
+    same spend, all saw room and all went through: in a measured run a key
+    whose budget allowed one call took 24 of 30 concurrent requests and
+    recorded 24 times its limit.
+
+    A call's cost is only known after it returns, so there is no amount to
+    reserve up front and no way to admit several at once and still bound the
+    total. What is left is to let one request at a time hold the window
+    between the check and the charge for a given key, which caps the
+    overshoot at the single call that was in flight when the limit was
+    crossed.
+
+    The cost is paid only where it was asked for: keys wait on themselves
+    and never on each other, and a key with no budget takes no lock at all,
+    so unlimited keys keep running fully in parallel.
+    """
+
+    def __init__(self) -> None:
+        self._locks: dict[str, threading.Lock] = {}
+        self._guard = threading.Lock()
+
+    def _lock_for(self, key_id: str) -> threading.Lock:
+        with self._guard:
+            lock = self._locks.get(key_id)
+            if lock is None:
+                lock = threading.Lock()
+                self._locks[key_id] = lock
+            return lock
+
+    def admit(self, key: KeyConfig) -> Admission:
+        """A window for this key: a real one if it has a budget to enforce."""
+        if key.monthly_budget_usd is None:
+            return Admission(None)
+        return Admission(self._lock_for(key.id))
 
 
 def log_refusal(state: BudgetState, model: str, endpoint: str) -> None:

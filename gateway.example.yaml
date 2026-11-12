@@ -19,6 +19,24 @@ routes:
     provider: openai
   - prefix: "claude-"
     provider: anthropic
+  # Self-hosted models served by Ollama. These prefixes are only examples:
+  # route whatever names `ollama list` shows on your own machine, and put a
+  # longer prefix before a shorter one that would also match it. They carry
+  # the version digit, as Ollama's own names do (llama3.2, not llama-3), so
+  # a name in some other shape still falls through to a 400 rather than
+  # being sent to a model that does not exist.
+  - prefix: "llama3"
+    provider: ollama
+  - prefix: "llama2"
+    provider: ollama
+  - prefix: "qwen"
+    provider: ollama
+  - prefix: "mistral"
+    provider: ollama
+  - prefix: "gemma"
+    provider: ollama
+  - prefix: "phi"
+    provider: ollama
   # Used by the tests and scripts/bench_gateway.py. Harmless to leave in: it
   # never reaches a network.
   - prefix: "fake-"
@@ -34,6 +52,16 @@ sessions:
 defaults:
   # Anthropic requires max_tokens. A request that omits it gets this.
   max_tokens: 1024
+
+# Per-provider settings. OpenAI and Anthropic take their endpoint and their
+# key from the environment, because a key does not belong in a file that is
+# meant to be readable. Ollama has no key and runs wherever you put it, so
+# its address lives here.
+providers:
+  ollama:
+    base_url: "http://localhost:11434/v1"
+    # A first request can be slow while the model is loaded into memory.
+    timeout_seconds: 120
 
 # Keys the gateway accepts. `id` is what appears in usage rows and logs.
 # monthly_budget_usd is an estimate against the configured price table; omit

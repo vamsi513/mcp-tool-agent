@@ -22,3 +22,6 @@ tests/fixtures/_record_scratch.db*
 
 # holds API key secrets
 gateway.yaml
+
+# benchmark output
+bench-results/

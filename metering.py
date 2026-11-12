@@ -162,6 +162,27 @@ def record_llm_turn(
         )
 
 
+def recent_llm_turns(
+    limit: int = 20, db: str | os.PathLike[str] | None = None
+) -> list[dict[str, Any]]:
+    """The most recently recorded turns, newest first.
+
+    One row per completed upstream call, which is what this table holds: a
+    call that was refused before it was made leaves no row, and no message
+    content is stored here or anywhere else in it.
+    """
+    if limit <= 0:
+        return []
+    init(db)
+    with closing(connect(db)) as conn:
+        rows = conn.execute(
+            "SELECT ts, user, model, input_tokens, output_tokens"
+            " FROM usage_llm ORDER BY id DESC LIMIT ?",
+            (int(limit),),
+        ).fetchall()
+    return [dict(row) for row in rows]
+
+
 def record_tool_call(
     user: str, tool: str, db: str | os.PathLike[str] | None = None
 ) -> None:

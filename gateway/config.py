@@ -22,11 +22,18 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_CONFIG_PATH = REPO_ROOT / "gateway.yaml"
 EXAMPLE_CONFIG_PATH = REPO_ROOT / "gateway.example.yaml"
 
-PROVIDERS = ("openai", "anthropic", "fake")
+PROVIDERS = ("openai", "anthropic", "fake", "ollama")
 SESSION_BACKENDS = ("sqlite", "redis")
 
 DEFAULT_TTL_SECONDS = 3600
 DEFAULT_MAX_TOKENS = 1024
+
+# Ollama serves an OpenAI-compatible API on this port by default. It is a
+# local address and needs no credential, which is why it is the one provider
+# whose endpoint is configured in the file rather than taken from the
+# environment alongside a key.
+DEFAULT_OLLAMA_BASE_URL = "http://localhost:11434/v1"
+DEFAULT_OLLAMA_TIMEOUT_SECONDS = 120.0
 
 
 class ConfigError(Exception):
@@ -41,11 +48,30 @@ class Route:
 
 @dataclass(frozen=True)
 class KeyConfig:
-    """One accepted API key. `secret` is never logged or returned."""
+    """One accepted API key. `secret` is never logged or returned.
+
+    `name` and `created_at` are optional notes for whoever reads the file or
+    runs `python -m gateway.cli keys list`. Nothing in the request path looks
+    at them, and a key written by hand without them works exactly as before.
+    """
 
     id: str
     secret: str
     monthly_budget_usd: float | None = None
+    name: str | None = None
+    created_at: str | None = None
+
+    @property
+    def masked_secret(self) -> str:
+        """The key with everything but its last four characters hidden.
+
+        The only form of an existing key that anything is allowed to print.
+        A key too short to mask is shown as all dots rather than partly
+        revealed.
+        """
+        if len(self.secret) <= 4:
+            return "*" * 8
+        return "*" * 8 + self.secret[-4:]
 
     def __repr__(self) -> str:  # keeps a stray repr from leaking the secret
         return f"KeyConfig(id={self.id!r}, monthly_budget_usd={self.monthly_budget_usd!r})"
@@ -59,11 +85,20 @@ class SessionConfig:
 
 
 @dataclass(frozen=True)
+class OllamaConfig:
+    """Where the local Ollama server is, and how long to wait for it."""
+
+    base_url: str = DEFAULT_OLLAMA_BASE_URL
+    timeout_seconds: float = DEFAULT_OLLAMA_TIMEOUT_SECONDS
+
+
+@dataclass(frozen=True)
 class GatewayConfig:
     routes: tuple[Route, ...] = ()
     keys: dict[str, KeyConfig] = field(default_factory=dict)
     sessions: SessionConfig = field(default_factory=SessionConfig)
     default_max_tokens: int = DEFAULT_MAX_TOKENS
+    ollama: OllamaConfig = field(default_factory=OllamaConfig)
 
     def provider_for(self, model: str) -> str | None:
         """The provider whose configured prefix matches `model`, first wins."""
@@ -132,7 +167,19 @@ def parse_config(raw: Any) -> GatewayConfig:
                 raise ConfigError(f"keys[{index}].monthly_budget_usd must not be negative")
         if secret in keys:
             raise ConfigError(f"keys[{index}].key is a duplicate")
-        keys[secret] = KeyConfig(id=identifier, secret=secret, monthly_budget_usd=budget)
+        name = entry.get("name")
+        if name is not None and not isinstance(name, str):
+            raise ConfigError(f"keys[{index}].name must be a string")
+        created_at = entry.get("created_at")
+        if created_at is not None and not isinstance(created_at, str):
+            raise ConfigError(f"keys[{index}].created_at must be a string")
+        keys[secret] = KeyConfig(
+            id=identifier,
+            secret=secret,
+            monthly_budget_usd=budget,
+            name=name,
+            created_at=created_at,
+        )
 
     sessions_raw = _mapping(document.get("sessions"), "sessions")
     backend = sessions_raw.get("backend", "sqlite")
@@ -155,6 +202,20 @@ def parse_config(raw: Any) -> GatewayConfig:
     if max_tokens <= 0:
         raise ConfigError("defaults.max_tokens must be positive")
 
+    providers_raw = _mapping(document.get("providers"), "providers")
+    ollama_raw = _mapping(providers_raw.get("ollama"), "providers.ollama")
+    ollama_url = str(ollama_raw.get("base_url", DEFAULT_OLLAMA_BASE_URL)).strip()
+    if not ollama_url:
+        raise ConfigError("providers.ollama.base_url must not be empty")
+    try:
+        ollama_timeout = float(
+            ollama_raw.get("timeout_seconds", DEFAULT_OLLAMA_TIMEOUT_SECONDS)
+        )
+    except (TypeError, ValueError) as exc:
+        raise ConfigError("providers.ollama.timeout_seconds must be a number") from exc
+    if ollama_timeout <= 0:
+        raise ConfigError("providers.ollama.timeout_seconds must be positive")
+
     return GatewayConfig(
         routes=tuple(routes),
         keys=keys,
@@ -164,6 +225,7 @@ def parse_config(raw: Any) -> GatewayConfig:
             redis_url=str(sessions_raw.get("redis_url", "redis://127.0.0.1:6379/0")),
         ),
         default_max_tokens=max_tokens,
+        ollama=OllamaConfig(base_url=ollama_url, timeout_seconds=ollama_timeout),
     )
 
 

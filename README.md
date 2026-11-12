@@ -891,7 +891,7 @@ curl -s localhost:8080/v1/chat/completions \
 |---|---|
 | Endpoints | `POST /v1/chat/completions`, `POST /v1/responses` |
 | Unauthenticated | `GET /healthz` returning exactly `{"status": "ok"}` and nothing about how the instance is configured, `GET /` listing the supported paths, and `GET /favicon.ico` returning 204, so a browser or a probe does not get a 404 |
-| Providers | OpenAI and Anthropic, plus an in-process fake for tests and the benchmark |
+| Providers | OpenAI, Anthropic and Ollama, plus an in-process fake for tests and the benchmark |
 | Request fields | `model`, `messages` / `input`, `instructions`, `previous_response_id`, `temperature`, `max_tokens` / `max_output_tokens`, `stream` |
 | Content | Text only. A string, or a list of content parts whose text is concatenated in order |
 | Streaming | SSE on both endpoints, text deltas, each in its own event format |
@@ -990,6 +990,19 @@ Two limits worth knowing:
 - A cost is not knowable before a call, so the check is against spend already
   recorded. A key can therefore overshoot its budget by **at most one
   request**.
+
+  That holds under parallel load as well, but only because the check and the
+  charge are held together. Measured on this branch before they were: 30
+  requests at once on a key whose budget allowed one call admitted 24 of them
+  and recorded 24 times the limit, because every one read the same
+  month-to-date spend before any had written a row. Each key now admits one
+  request at a time through that window, so the overshoot is the single call
+  that was in flight when the limit was crossed. **A key with a budget
+  therefore serves its requests one at a time.** A key with no budget takes
+  no lock and stays fully parallel, and keys never wait on each other. The
+  alternative, reserving an estimated cost up front and letting several
+  through, was not taken: the estimate would either refuse requests that
+  would have fitted or fail to bound what it was meant to bound.
 - When an upstream reports no usage for a streamed response, the gateway
   records a zero row and logs that it did, rather than inventing numbers. That
   under-counts spend for that request.
@@ -1076,6 +1089,151 @@ about behaviour under load. Each request includes a SQLite budget read and a
 usage write, and `/v1/responses` also writes a session row. Re-run the script
 rather than trusting these numbers on different hardware.
 
+## Concurrency
+
+`scripts/bench_gateway_concurrency.py` holds a fixed number of requests in
+flight and reports throughput, the latency spread, failures and peak memory.
+
+```bash
+python scripts/bench_gateway_concurrency.py
+python scripts/bench_gateway_concurrency.py --levels 1,10,50 --delay-ms 10
+python scripts/bench_gateway_concurrency.py --client-processes 5
+```
+
+Measured on one machine, loopback, an in-process fake provider with a 5 ms
+delay, 400 requests per level after 20 warmup, on a key with no budget. The
+server ran sync endpoints through a 40-thread worker pool.
+
+With the load generator in the same process as the server, which is the
+default:
+
+```
+concurrency      req/s     P50 ms     P95 ms     P99 ms  errors   peak MB
+          1     105.56      9.109     11.591     17.059       0      62.0
+         10     965.65      8.587     18.048     30.002       0      63.8
+         50     350.05    118.403    292.251    387.871       0      76.3
+        200     173.60    583.794   1741.758   1860.290       0      95.1
+```
+
+With the same load spread over five client processes (`--client-processes 5`),
+so the client's threads no longer share a GIL with the server's:
+
+```
+concurrency      req/s     P50 ms     P95 ms     P99 ms  errors   peak MB
+          5     284.17      8.429     17.688     42.465       0      60.0
+         10     447.92      9.876     20.770     33.456       0      62.2
+         50     488.00     19.136    107.284    223.284       0      62.2
+        200     505.78    133.015    181.567    268.894       0      63.7
+```
+
+**The two tables disagree, and the second one is the better measurement.**
+Read on its own, the first looks like throughput collapsing past ten
+concurrent requests. It is mostly not: at 50 and 200 the client's threads are
+competing with the server's for one interpreter, and moving them out roughly
+trebled throughput at the same concurrency while cutting P50 from 118 ms to
+19 ms. A single run at 50 in flight with a 50 ms delay made the same point
+from the other side: 118 req/s with one client process against 324 req/s with
+five, where queueing alone through a 40-thread pool would have predicted
+about 800. So the first table is reported because it is what the default
+command prints, not because it describes the gateway.
+
+What these numbers do **not** establish: they are one machine over loopback
+against a fake provider, so they are not provider latency, not capacity, and
+not transferable to other hardware, another database or a real upstream.
+Every level completed with zero errors, which is the part worth keeping:
+nothing failed, no budget was overshot and no stream was mixed up under load.
+Levels are rounded to a multiple of `--client-processes`, which is why the
+second table starts at 5.
+
+Re-run the script rather than trusting any of this on different hardware. It
+writes a JSON file per run into `bench-results/`, which is gitignored.
+
+## Self-hosted models through Ollama
+
+Ollama serves an OpenAI-compatible API, so a self-hosted model is routed like
+any other. Unlike the other providers its address comes from the config file
+rather than the environment: there is no credential to keep out of the file,
+and no key is sent.
+
+```yaml
+routes:
+  - prefix: "llama3"
+    provider: ollama
+  - prefix: "qwen"
+    provider: ollama
+
+providers:
+  ollama:
+    base_url: "http://localhost:11434/v1"
+    timeout_seconds: 120
+```
+
+The example prefixes carry Ollama's own version digit (`llama3.2`, not
+`llama-3`), so a model name in some other shape still falls through to a 400
+rather than being sent to a model that does not exist. Route whatever
+`ollama list` shows on your machine.
+
+Both endpoints work, streaming and not, exactly as for the other providers.
+A caller's `max_tokens` goes upstream as `max_tokens`: these are not OpenAI's
+reasoning families, so none of that renaming applies.
+
+Errors map onto the shapes already in use. A server that is not running gives
+a `502` saying so by address rather than an exception class, a request past
+`timeout_seconds` gives a `502` naming the deadline, and Ollama's habit of
+answering some failures with a bare `{"error": "..."}` string is handled
+alongside the usual nested form.
+
+**Limits.** Text only: tools, images, embeddings and batching are not
+implemented, and the gateway refuses the fields for them with a 400 as it
+does for every provider. Nothing here says anything about speed, hardware or
+what a given model can do. The provider is tested against a mock transport
+only, so what is claimed is that the request and response shapes match what
+those tests assert; no Ollama server was run.
+
+## Administration
+
+`python -m gateway.cli` manages keys, budgets and usage against the same
+config file and the same usage rows the running gateway uses. There is no
+second store.
+
+```bash
+python -m gateway.cli keys create --id ci --name "build runner" --budget 10
+python -m gateway.cli keys list
+python -m gateway.cli budget set --id ci --budget 25
+python -m gateway.cli budget set --id ci --unlimited
+python -m gateway.cli usage show
+python -m gateway.cli requests tail -n 20
+```
+
+`keys create` generates the key, writes it to the config and prints it once;
+every other command masks a key to its last four characters. `--json` works
+on all of them, and a command that cannot do what was asked exits `2` with a
+message on stderr.
+
+Two things it will not do. It refuses to write to the committed
+`gateway.example.yaml`, and it validates a config before replacing it, so a
+write that would not load afterwards is rejected with the file untouched.
+
+Three limits worth stating plainly:
+
+- **Writing a key or a budget rewrites the config through a YAML load and
+  dump, so comments and layout in the file are lost.** The write is atomic
+  and keeps the file's permissions, but a commented config will come back
+  uncommented. Only `keys create` and `budget set` write; the reading
+  commands never touch the file.
+- **`requests tail` shows no latency and no HTTP status, because the meter
+  records neither.** A `usage_llm` row carries a timestamp, the key id, the
+  model and the token counts. The provider column is worked out from the
+  configured routes rather than stored per request, and the status column
+  distinguishes only a call that reported usage from one that did not. A
+  request refused before it reached an upstream leaves no row at all.
+- **`keys list` shows a name and a creation time only for keys that have
+  them.** Both are optional notes added by `keys create`; a key written by
+  hand shows a dash and works exactly as before.
+
+No message content is stored by the meter or printed by any of these
+commands.
+
 ## Tests
 
 Every gateway test uses the in-process fake provider or a mock transport, so
@@ -1085,8 +1243,21 @@ none reaches a provider or the network.
 pytest -q tests/test_gateway_translate.py tests/test_gateway_endpoints.py \
          tests/test_gateway_providers.py tests/test_gateway_sessions.py \
          tests/test_gateway_budgets.py tests/test_gateway_config.py \
-         tests/test_gateway_bench.py
+         tests/test_gateway_bench.py tests/test_gateway_public_routes.py \
+         tests/test_gateway_responses_stream.py tests/test_gateway_ollama.py \
+         tests/test_gateway_cli.py tests/test_gateway_concurrency.py \
+         tests/test_gateway_bench_concurrency.py tests/test_store_concurrency.py
 ```
+
+That is 280 tests. The whole repository's suite is 555 passed and 2 skipped,
+the two skips being the tests that need a reachable Redis.
+
+The concurrency tests drive the app from a thread pool and assert what has to
+hold under parallel load: that every request gets its own correct body, that
+a budget is not overshot, that two streams are never interleaved and that
+parallel continuations of one response id each branch rather than overwrite
+each other. One of them checks that requests really did overlap, so the
+others cannot pass by accident on a machine that ran them one at a time.
 
 The Redis session tests need a reachable Redis and skip themselves without
 one. CI runs them in a second job against a `redis:8-alpine` service

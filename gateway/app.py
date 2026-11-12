@@ -22,6 +22,7 @@ from gateway.config import GatewayConfig, KeyConfig, load_config
 from gateway.providers.anthropic import AnthropicProvider
 from gateway.providers.base import Completion, Provider, StreamCollector
 from gateway.providers.fake import FakeProvider
+from gateway.providers.ollama import OllamaProvider
 from gateway.providers.openai import OpenAIProvider
 from gateway.schemas import (
     UNSUPPORTED_CHAT_FIELDS,
@@ -78,6 +79,10 @@ def default_providers(config: GatewayConfig) -> dict[str, Provider]:
     return {
         "openai": OpenAIProvider(),
         "anthropic": AnthropicProvider(default_max_tokens=config.default_max_tokens),
+        "ollama": OllamaProvider(
+            base_url=config.ollama.base_url,
+            timeout_seconds=config.ollama.timeout_seconds,
+        ),
         "fake": FakeProvider(),
     }
 
